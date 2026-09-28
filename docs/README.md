@@ -1,0 +1,6 @@
+# Docs
+
+- `../CLAUDE.md`: the project brief. Read first.
+- `superpowers/specs/2026-09-28-applied-math-design.md`: design spec, decisions, and open questions across all four stages.
+- `superpowers/plans/2026-09-28-stage1-quick-math.md`: step-by-step implementation plan for Stage 1.
+- `skills-used.md`: which Claude Code skills produced these documents and which the build should use.
