@@ -83,3 +83,11 @@ def test_intro_shown_once(tmp_path: Path):
     show_intros(["pot_odds"], s, say)
     assert sum("pot_odds" in line for line in out) == 1
     assert s.intro_shown == ["pot_odds"]
+
+
+def test_displayed_answer_rounds_to_one_decimal(tmp_path: Path):
+    s = Store(tmp_path / "p.json")
+    it = Item("t:3", "pot_odds", "?", 33.3333, "e", abs_tol=0.6)
+    ask, say, out = scripted(["33"])
+    run_session([it], s, "type", ask, say, clock=FakeClock(), now=lambda: 0.0)
+    assert any("Answer: 33.3 |" in line for line in out)

@@ -60,7 +60,7 @@ def run_session(
             if mode == "say":
                 ask("  (say it, then press Enter) ")
                 secs = clock() - t0
-                say(f"  Answer: {fmt(item.answer)} | {item.explanation}")
+                say(f"  Answer: {fmt(round(item.answer, 1))} | {item.explanation}")
                 correct = ask("  Did you get it? [y/n] ").strip().lower().startswith("y")
             else:
                 raw = ask("  > ")
@@ -72,7 +72,7 @@ def run_session(
                 else:
                     correct = item.is_correct(given)
                 mark = "OK " if correct else "MISS "
-                say(f"  {mark}Answer: {fmt(item.answer)} | {item.explanation}")
+                say(f"  {mark}Answer: {fmt(round(item.answer, 1))} | {item.explanation}")
             attempt = Attempt(item.key, item.drill, correct, round(secs, 1), mode, now())
             store.record(item, attempt)
             results.append(attempt)
