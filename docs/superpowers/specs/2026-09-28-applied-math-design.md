@@ -26,7 +26,7 @@ These are judgment calls the brief left open. Each one is easy to reverse before
 
 The brief orders the stages and says each must work before the next starts. But FIR interviews start in early October, about a week from today, and the interview question he will be asked is about pot odds, which is Stage 2.
 
-Recommendation: keep the order, but size Stage 1 so it is done in two or three evenings, then build the pot-odds and outs drills as the first slice of Stage 2 before the rest of Stage 2. The Stage 1 plan is sized for that. If that is too slow, the alternative is to build the pot-odds drill first on the same engine; the engine does not care which drill comes first.
+Resolved: Aydin chose poker first (section 9). The engine is built first, then the poker drills, then the quick-math drills.
 
 Either way: the pot-odds numbers he needs for the interview (25% break-even on $10 into $30, 9 outs is about 35% and 20%) fit on an index card. Do not let building the tool crowd out saying those out loud every day this week.
 
@@ -97,8 +97,16 @@ This stage is not drills. It is a small library plus notebooks he works through:
 
 Ground-rule gate: no backtest result goes on the resume until he can whiteboard, without the code open, the strategy logic, the backtest method, and the three pitfalls named in the brief (look-ahead bias, overfitting, transaction costs). The plan for this stage will include a written self-test with those questions, which he answers by hand in `notes/`.
 
-## 9. Open questions for Aydin
+## 9. Answers from Aydin (2026-09-28)
 
-1. Which math courses have you taken, and which Kelley math course are you in now? (The brief leaves this blank. It sets Stage 4 difficulty.)
-2. Keep the strict stage order, or build the pot-odds drill first because of the October interviews? Section 3 recommends the first with a fast Stage 1.
-3. Is a terminal tool acceptable, or do you want something you can open on a phone between classes? Phone use changes the architecture and should be decided before Stage 2, not after.
+1. **Math background:** AP Statistics, AP Calculus AB (5), currently in BUS-B110 (business calculus). Stage 4 can assume derivatives, basic probability distributions, and comfort with algebra. No linear algebra or multivariable calculus.
+2. **Order:** poker math first. Build order is now: engine (items, store, session, CLI), then the poker drills, then the quick-math drills. Both drill sets ride the same engine, so nothing in the architecture changes.
+3. **Interface:** terminal for now, phone later. Design consequence, applied now: the engine takes `ask` and `say` functions and never touches the terminal directly, so a phone front end (a small web page over the same engine, or a Pythonista script) can be added without rewriting drills or the store. The progress file format is plain JSON for the same reason.
+
+## 10. Stage 2 poker drills (built first)
+
+- `pot_odds`: "Pot is $30 and it's $10 to call. Break-even equity (%)?" Answer call / (pot + call). Explanation also gives the ratio form (3 to 1).
+- `outs_equity`: "9 outs, 2 cards to come. Equity (%)?" The exact answer is counted from the deck (47 unseen on the flop, 46 on the turn), shown next to the rule of 4 and 2. Either the rule's answer or the exact one counts as correct.
+- `ev_call`: "Pot $60, $20 to call, 30% equity. EV of calling ($)?" Answer equity x pot minus (1 - equity) x call.
+- `implied_odds`: "Pot $30, $10 to call, 20% equity. How much more must you win later to break even ($)?" Answer call / equity minus pot minus call.
+- `combos`: "How many combos of AK suited?" and blocker variants ("you hold one ace; how many combos of AA can they have?"). Answer from counting, explanation shows the count.
