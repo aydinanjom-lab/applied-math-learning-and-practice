@@ -2,5 +2,6 @@
 
 - `../CLAUDE.md`: the project brief. Read first.
 - `superpowers/specs/2026-09-28-applied-math-design.md`: design spec, decisions, and open questions across all four stages.
-- `superpowers/plans/2026-09-28-stage1-quick-math.md`: step-by-step implementation plan for Stage 1.
+- `superpowers/plans/2026-09-28-stage1-quick-math.md`: step-by-step plan for the engine and the quick-math drills (executed).
+- `superpowers/plans/2026-09-28-poker-drills.md`: the poker drills, built first (executed).
 - `skills-used.md`: which Claude Code skills produced these documents and which the build should use.

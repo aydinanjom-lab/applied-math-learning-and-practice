@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Status (2026-09-28):** executed. Build order was Tasks 1 to 3, then the poker drills (`2026-09-28-poker-drills.md`), then Tasks 7 to 9, then Tasks 4 to 6 and 10. Drill names in the CLI tests were switched to poker ones because poker was registered first.
+
 **Goal:** A terminal drill tool that runs timed mental-math sessions, stars misses, brings starred items back first, and logs accuracy and speed.
 
 **Architecture:** A small engine (`items`, `store`, `session`, `cli`) plus one generator function per drill in `applied_math/drills/quick.py`. Generators take a `random.Random` and return an `Item`; the engine never knows which drill it is running. Progress lives in one JSON file.
