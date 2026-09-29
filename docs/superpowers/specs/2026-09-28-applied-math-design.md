@@ -110,3 +110,13 @@ Ground-rule gate: no backtest result goes on the resume until he can whiteboard,
 - `ev_call`: "Pot $60, $20 to call, 30% equity. EV of calling ($)?" Answer equity x pot minus (1 - equity) x call.
 - `implied_odds`: "Pot $30, $10 to call, 20% equity. How much more must you win later to break even ($)?" Answer call / equity minus pot minus call.
 - `combos`: "How many combos of AK suited?" and blocker variants ("you hold one ace; how many combos of AA can they have?"). Answer from counting, explanation shows the count.
+
+## 11. Web version (2026-09-29)
+
+Aydin asked for something that runs without a terminal and can be hosted on Netlify. Netlify serves static pages, not Python, so the drills were ported to a plain web page: `web/index.html`, `web/style.css`, `web/app.js`, with the drill math in `web/drills.js` and the progress rules in `web/store.js`. No build step, no framework, no third-party code.
+
+- Progress lives in the browser's local storage under the same JSON shape as `data/progress.json`. Per device, not synced.
+- The say-or-type modes, starred-first ordering, two-clean-reps rule, timer, one-time definitions, index card, stats, and starred list all carry over.
+- Cost accepted: the drill generators exist in Python and in JavaScript. Both have tests (`pytest`, `npm test`). Any change to one must be made to the other.
+- Design: single column, system font, one primary action per screen, works at 390px, light and dark from the system setting, keyboard shortcuts (Enter to reveal or continue, y/n to grade).
+- Phone sync across devices is deliberately out of scope; it needs accounts and a database.

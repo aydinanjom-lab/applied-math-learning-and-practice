@@ -2,9 +2,32 @@
 
 Short, timed drills. Ten minutes a day. See `CLAUDE.md` for who this is for and why.
 
-## How to run it (macOS)
+## Easiest: the web page
 
-Needs Python 3.11 or newer. Check with `python3 --version`. Nothing else to install.
+The same drills as a web page you open in any browser, phone included. No installs.
+
+**Put it on Netlify (once, about two minutes):**
+
+1. Go to app.netlify.com and sign in with GitHub.
+2. Add new site, Import an existing project, pick this repository and this branch.
+3. Netlify reads `netlify.toml` and knows the page lives in the `web` folder. Leave the build command empty. Deploy.
+4. You get a link like `something.netlify.app`. Bookmark it. On your phone, use Add to Home Screen so it opens like an app.
+
+Every time this repository changes, Netlify updates the page on its own.
+
+**Try it on your Mac without Netlify:**
+
+    cd applied-math-learning-and-practice/web
+    python3 -m http.server 8000
+
+then open http://localhost:8000 in a browser.
+
+**One limit to know:** progress is saved inside the browser you use. Your laptop and your phone each keep their own
+record. Practice on one device, or treat the other as scratch. Clearing the browser's site data wipes it.
+
+## The terminal version (macOS)
+
+Same drills, same star rules, same progress rules. Needs Python 3.11 or newer. Check with `python3 --version`. Nothing else to install.
 
 1. Get the code once:
 
@@ -48,8 +71,10 @@ Progress lives in `data/progress.json` (not committed). Delete it to start over.
 
 ## Tests
 
-    pip install pytest
-    python3 -m pytest
+    pip install pytest && python3 -m pytest     # terminal version, 55 tests
+    npm test                                    # web version's drill math and star rules, 11 tests
+
+The drill math exists twice, once for each version. Change one, change the other, and both test suites check it.
 
 ## Exit criteria
 

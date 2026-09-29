@@ -24,6 +24,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `ui-ux-pro-max` | Checked for terminal-relevant rules. Two carried over: never signal by color alone (every mark has a symbol and a word), and every error says how to recover. The rest is web and mobile guidance, not applicable yet; revisit for the phone front end. |
 | `test-driven-development` | Menu, colors, timer, star messages, explain command, named draws, clean pot ratios: each test-first. 55 tests. |
 
+## Used for the web version (2026-09-29)
+
+| Skill | What it was used for |
+|---|---|
+| `ui-ux-pro-max` | Its design-system search gave the layout pattern (single column, large type, one primary action) and the checklist (contrast, focus rings, reduced motion, 390px). Its font pick was rejected as wrong for the audience. |
+| `test-driven-development` | Node tests for the ported drill math and progress rules, written before the port. 11 tests. |
+| `run` (built-in browser driving) | Drove a full session in Chromium at phone width; caught a stray "null" on the result screen and a missing icon before shipping. |
+
 ## Still to use
 
 | Skill | When |
