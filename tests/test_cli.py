@@ -70,3 +70,52 @@ def test_list_command_names_groups_and_drills():
     assert main(["list"], ask=ask, say=say) == 0
     text = "\n".join(out)
     assert "poker" in text and "outs_equity" in text
+
+
+def test_no_args_opens_menu_and_runs_chosen_drill(tmp_path: Path):
+    # menu: 1 = poker, 2 = type mode, 2 = five items; then five typed answers
+    ask, say, out = scripted(["1", "2", "2"] + ["-999"] * 5)
+    rc = main(["--data", str(tmp_path / "p.json")], ask=ask, say=say)
+    assert rc == 0
+    text = "\n".join(out)
+    assert "What do you want to drill?" in text
+    assert "0/5 correct" in text
+
+
+def test_menu_enter_takes_defaults(tmp_path: Path):
+    # Enter, Enter, Enter = poker, say mode, 10 items; then 10 say-mode items (Enter, y)
+    ask, say, out = scripted(["", "", ""] + ["", "y"] * 10)
+    rc = main(["--data", str(tmp_path / "p.json")], ask=ask, say=say)
+    assert rc == 0
+    assert "10/10 correct" in "\n".join(out)
+
+
+def test_menu_rejects_bad_choice_and_reasks(tmp_path: Path):
+    ask, say, out = scripted(["9", "1", "2", "2"] + ["-999"] * 5)
+    rc = main(["--data", str(tmp_path / "p.json")], ask=ask, say=say)
+    assert rc == 0
+    assert any("1 to" in line for line in out)
+
+
+def test_session_summary_lists_starred_prompts(tmp_path: Path):
+    ask, say, out = scripted(["-999"])
+    main(["drill", "pot_odds", "-n", "1", "--type", "--data", str(tmp_path / "p.json"), "--seed", "2"], ask=ask, say=say)
+    text = "\n".join(out)
+    assert "Starred for next time" in text and "Pot is" in text.split("Starred for next time")[1]
+
+
+def test_explain_command_prints_index_card():
+    ask, say, out = scripted([])
+    assert main(["explain", "pot_odds"], ask=ask, say=say) == 0
+    text = "\n".join(out)
+    assert "25%" in text and "$10" in text
+    ask, say, out = scripted([])
+    assert main(["explain", "nope"], ask=ask, say=say) == 2
+    ask, say, out = scripted([])
+    assert main(["explain"], ask=ask, say=say) == 0
+    assert "35%" in "\n".join(out), "the no-argument version prints the whole poker index card"
+
+
+def test_interview_group():
+    from applied_math.drills import resolve
+    assert resolve("interview") == ["pot_odds", "outs_equity"]

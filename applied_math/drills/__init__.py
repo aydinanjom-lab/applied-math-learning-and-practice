@@ -25,6 +25,7 @@ DRILLS: dict[str, Generator] = {
 
 GROUPS: dict[str, list[str]] = {
     "poker": ["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos"],
+    "interview": ["pot_odds", "outs_equity"],
     "quick": ["percent_of", "fraction_to_decimal", "multiply_shortcuts", "growth_rate", "back_of_envelope"],
     "all": ["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos",
             "percent_of", "fraction_to_decimal", "multiply_shortcuts", "growth_rate", "back_of_envelope"],
