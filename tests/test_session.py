@@ -90,4 +90,37 @@ def test_displayed_answer_rounds_to_one_decimal(tmp_path: Path):
     it = Item("t:3", "pot_odds", "?", 33.3333, "e", abs_tol=0.6)
     ask, say, out = scripted(["33"])
     run_session([it], s, "type", ask, say, clock=FakeClock(), now=lambda: 0.0)
-    assert any("Answer: 33.3 |" in line for line in out)
+    assert any("Answer: 33.3" in line for line in out) and not any("33.333" in line for line in out)
+
+
+def test_header_shows_running_score_and_timer(tmp_path: Path):
+    s = Store(tmp_path / "p.json")
+    ask, say, out = scripted(["25", "-1"])
+    run_session([starred_item(), starred_item("t:2")], s, "type", ask, say, clock=FakeClock(), now=lambda: 0.0)
+    text = "\n".join(out)
+    assert "[2/2]" in text and "1 right" in text
+    assert "2.5s" in text
+
+
+def test_type_mode_marks_use_symbols_and_words(tmp_path: Path):
+    s = Store(tmp_path / "p.json")
+    ask, say, out = scripted(["25"])
+    run_session([starred_item()], s, "type", ask, say, clock=FakeClock(), now=lambda: 0.0)
+    assert any("✓ correct" in line for line in out)
+
+
+def test_say_mode_reprompts_until_y_or_n(tmp_path: Path):
+    s = Store(tmp_path / "p.json")
+    ask, say, out = scripted(["", "maybe", "", "n"])
+    results = run_session([starred_item()], s, "say", ask, say, clock=FakeClock(), now=lambda: 0.0)
+    assert results[0].correct is False
+    assert any("y or n" in line for line in out)
+
+
+def test_star_cleared_message(tmp_path: Path):
+    s = Store(tmp_path / "p.json")
+    s.record(starred_item(), Attempt("pot_odds:30:10", "pot_odds", False, 1.0, "type", 0.0))
+    s.record(starred_item(), Attempt("pot_odds:30:10", "pot_odds", True, 1.0, "type", 0.0))
+    ask, say, out = scripted(["25"])
+    run_session([starred_item()], s, "type", ask, say, clock=FakeClock(), now=lambda: 0.0)
+    assert any("star cleared" in line for line in out)

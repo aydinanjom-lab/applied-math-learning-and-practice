@@ -30,7 +30,7 @@ def test_pot_odds_brief_example_gives_25():
 
 def test_outs_equity_exact_and_rule_both_accepted():
     for it in items(poker.outs_equity):
-        outs, cards = re.match(r"(\d+) outs, (\d) cards? to come\. Equity \(%\)\?", it.prompt).groups()
+        outs, cards = re.search(r"(\d+) outs\)? on the \w+, (\d) cards? to come\. Equity \(%\)\?", it.prompt).groups()
         outs, cards = int(outs), int(cards)
         if cards == 1:
             exact = outs / 46 * 100
@@ -82,3 +82,9 @@ def test_registry():
         resolve("nope")
     for name in DRILLS:
         assert name in DEFINITIONS and "\n" not in DEFINITIONS[name]
+
+
+def test_outs_prompts_name_common_draws():
+    prompts = " ".join(it.prompt for it in items(poker.outs_equity, 500)).lower()
+    assert "flush draw" in prompts and "open-ended straight draw" in prompts and "gutshot" in prompts
+    assert "on the flop" in prompts and "on the turn" in prompts

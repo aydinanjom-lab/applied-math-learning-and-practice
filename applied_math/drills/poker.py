@@ -45,16 +45,30 @@ def _exact_equity(outs: int, cards: int) -> float:
     return (1 - comb(47 - outs, 2) / comb(47, 2)) * 100
 
 
+DRAW_NAMES = {
+    2: "pocket pair to a set",
+    4: "gutshot",
+    6: "two overcards",
+    8: "open-ended straight draw",
+    9: "flush draw",
+    12: "flush draw plus gutshot",
+    15: "flush draw plus open-ended straight draw",
+}
+
+
 def outs_equity(rng: random.Random) -> Item:
     outs = rng.randint(2, 15)
     cards = rng.choice([1, 2])
     exact = _exact_equity(outs, cards)
     rule = outs * (4 if cards == 2 else 2)
     plural = "card" if cards == 1 else "cards"
+    street = "on the flop" if cards == 2 else "on the turn"
+    name = DRAW_NAMES.get(outs)
+    lead = f"{name.capitalize()} ({outs} outs)" if name else f"{outs} outs"
     return Item(
         key=f"outs_equity:{outs}:{cards}",
         drill="outs_equity",
-        prompt=f"{outs} outs, {cards} {plural} to come. Equity (%)?",
+        prompt=f"{lead} {street}, {cards} {plural} to come. Equity (%)?",
         answer=exact,
         explanation=(
             f"rule of 4 and 2: {outs} x {4 if cards == 2 else 2} = {rule}% "

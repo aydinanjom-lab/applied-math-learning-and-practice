@@ -13,6 +13,7 @@ from typing import Callable
 from .drills import DEFINITIONS, DRILLS
 from .items import Item, fmt, parse_answer
 from .store import Attempt, Store
+from .ui import Palette, plain
 
 Ask = Callable[[str], str]
 Say = Callable[[str], None]
@@ -43,6 +44,16 @@ def show_intros(drill_names: list[str], store: Store, say: Say) -> None:
             store.mark_intro_shown(name)
 
 
+def _self_grade(ask: Ask, say: Say) -> bool:
+    while True:
+        reply = ask("  Did you get it? [y/n] ").strip().lower()
+        if reply.startswith("y"):
+            return True
+        if reply.startswith("n"):
+            return False
+        say("  Please answer y or n.")
+
+
 def run_session(
     items: list[Item],
     store: Store,
@@ -51,30 +62,43 @@ def run_session(
     say: Say,
     clock: Callable[[], float] = time.monotonic,
     now: Callable[[], float] = time.time,
+    palette: Palette | None = None,
 ) -> list[Attempt]:
+    pal = palette or plain()
     results: list[Attempt] = []
+    n_ok = 0
     try:
         for i, item in enumerate(items, 1):
-            say(f"\n[{i}/{len(items)}] {item.prompt}")
+            starred = item.key in store.stars
+            tag = pal.dim(" (starred)") if starred else ""
+            say(f"\n{pal.dim(f'[{i}/{len(items)}] {n_ok} right')}{tag}")
+            say(f"{pal.bold(item.prompt)}")
             t0 = clock()
             if mode == "say":
                 ask("  (say it, then press Enter) ")
                 secs = clock() - t0
-                say(f"  Answer: {fmt(round(item.answer, 1))} | {item.explanation}")
-                correct = ask("  Did you get it? [y/n] ").strip().lower().startswith("y")
+                say(f"  Answer: {pal.bold(fmt(round(item.answer, 1)))}  {pal.dim(item.explanation)}")
+                correct = _self_grade(ask, say)
+                say(f"  {pal.ok('✓ correct') if correct else pal.miss('✗ missed')}  {pal.dim(f'{secs:.1f}s')}")
             else:
                 raw = ask("  > ")
                 secs = clock() - t0
                 given = parse_answer(raw)
                 if given is None:
-                    say("  That's not a number; counted as a miss.")
+                    say("  That's not a number; counted as a miss. Type digits only, like 25 or 33.3.")
                     correct = False
                 else:
                     correct = item.is_correct(given)
-                mark = "OK " if correct else "MISS "
-                say(f"  {mark}Answer: {fmt(round(item.answer, 1))} | {item.explanation}")
+                mark = pal.ok("✓ correct") if correct else pal.miss("✗ missed")
+                say(f"  {mark}  {pal.dim(f'{secs:.1f}s')}  Answer: {pal.bold(fmt(round(item.answer, 1)))}")
+                say(f"  {pal.dim(item.explanation)}")
             attempt = Attempt(item.key, item.drill, correct, round(secs, 1), mode, now())
             store.record(item, attempt)
+            if starred and item.key not in store.stars:
+                say(f"  {pal.ok('star cleared')}: two clean reps in a row")
+            elif not correct:
+                say(f"  {pal.miss('starred')}: comes back first next session until you get it twice running")
+            n_ok += correct
             results.append(attempt)
     except KeyboardInterrupt:
         say("\nStopped early; saving what you did.")
