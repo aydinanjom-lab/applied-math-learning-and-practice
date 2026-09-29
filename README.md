@@ -22,12 +22,20 @@ Every time this repository changes, Netlify updates the page on its own.
 
 then open http://localhost:8000 in a browser.
 
+**What's on the page:** eight drill sets (interview, poker, quick math, banking interview numbers, sports betting math,
+Mighty Moose numbers, Novyx numbers, Houston energy basics), an Interview run (the FIR question, three typed answers,
+90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), a level per set from your typed
+answers only (New, Learning, Solid, Fast, Cold), a daily streak with one free skip a week, and personal bests. Sports
+betting math unlocks once poker is Solid on every drill, with an "unlock anyway" link. The betting set is math practice
+only: odds are generated, and nothing is ever recorded as a bet.
+
 **One limit to know:** progress is saved inside the browser you use. Your laptop and your phone each keep their own
 record. Practice on one device, or treat the other as scratch. Clearing the browser's site data wipes it.
 
 ## The terminal version (macOS)
 
-Same drills, same star rules, same progress rules. Needs Python 3.11 or newer. Check with `python3 --version`. Nothing else to install.
+The original ten drills (poker and quick math) with the same wording and star rules. It does not have the newer packs,
+levels, streaks, or the interview run; the web page is the main version now. Needs Python 3.11 or newer. Check with `python3 --version`. Nothing else to install.
 
 1. Get the code once:
 

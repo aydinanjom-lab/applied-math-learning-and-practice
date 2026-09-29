@@ -32,6 +32,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | Node tests for the ported drill math and progress rules, written before the port. 11 tests. |
 | `run` (built-in browser driving) | Drove a full session in Chromium at phone width; caught a stray "null" on the result screen and a missing icon before shipping. |
 
+## Used for the gamification and scope build (2026-09-29)
+
+| Skill | What it was used for |
+|---|---|
+| `brainstorming` | The plan itself: fresh look, options, refused list, open questions, written before any code. |
+| `test-driven-development` | 23 Node tests and 56 Python tests, written before the drill packs, game logic, and store changes. |
+| `run` (browser driving) | Full run in Chromium at phone width with the clock set to a Sunday: interview run, a choice-style question, the weekly check, the unlock override. |
+
 ## Still to use
 
 | Skill | When |

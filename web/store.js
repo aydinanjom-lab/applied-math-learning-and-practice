@@ -8,6 +8,10 @@ export class Store {
     this.attempts = [];
     this.stars = {};
     this.introShown = [];
+    this.days = [];
+    this.weekly = [];
+    this.bests = {};
+    this.unlocked = [];
     try {
       const raw = storage.getItem(STORAGE_KEY);
       if (raw) {
@@ -15,6 +19,10 @@ export class Store {
         this.attempts = data.attempts ?? [];
         this.stars = data.stars ?? {};
         this.introShown = data.intro_shown ?? [];
+        this.days = data.days ?? [];
+        this.weekly = data.weekly ?? [];
+        this.bests = data.bests ?? {};
+        this.unlocked = data.unlocked ?? [];
       }
     } catch {
       // corrupt or blocked storage: start fresh, never crash a session
@@ -32,12 +40,21 @@ export class Store {
   }
 
   starredItems() { return Object.values(this.stars).map((s) => s.item); }
+  starredKeys() { return Object.keys(this.stars); }
+  markDay(key) { if (!this.days.includes(key)) this.days.push(key); }
+  addWeekly(entry) { this.weekly.push(entry); }
+  recordBest(group, seconds) {
+    if (this.bests[group] !== undefined && this.bests[group] <= seconds) return false;
+    this.bests[group] = seconds;
+    return true;
+  }
+  unlock(group) { if (!this.unlocked.includes(group)) this.unlocked.push(group); }
   isStarred(key) { return Boolean(this.stars[key]); }
   markIntroShown(drill) { if (!this.introShown.includes(drill)) this.introShown.push(drill); }
 
   save() {
     try {
-      this.storage.setItem(STORAGE_KEY, JSON.stringify({ attempts: this.attempts, stars: this.stars, intro_shown: this.introShown }));
+      this.storage.setItem(STORAGE_KEY, JSON.stringify({ attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked }));
     } catch {
       // private mode or full storage: the session still runs, it just won't persist
     }

@@ -30,7 +30,7 @@ def pot_odds(rng: random.Random) -> Item:
     return Item(
         key=f"pot_odds:{pot}:{call}",
         drill="pot_odds",
-        prompt=f"Pot is ${pot:,} and it's ${call:,} to call. Break-even equity (%)?",
+        prompt=f"There is ${pot:,} in the pot. It costs you ${call:,} to call. How often do you need to win for calling to break even? Answer in %.",
         answer=answer,
         explanation=(
             f"call / (pot + call) = {call} / {pot + call} = {answer:.1f}% "
@@ -48,13 +48,13 @@ def _exact_equity(outs: int, cards: int) -> float:
 
 
 DRAW_NAMES = {
-    2: "pocket pair to a set",
-    4: "gutshot",
+    2: "a pocket pair hoping for a set",
+    4: "a gutshot straight draw",
     6: "two overcards",
-    8: "open-ended straight draw",
-    9: "flush draw",
-    12: "flush draw plus gutshot",
-    15: "flush draw plus open-ended straight draw",
+    8: "an open-ended straight draw",
+    9: "a flush draw",
+    12: "a flush draw plus a gutshot",
+    15: "a flush draw plus an open-ended straight draw",
 }
 
 
@@ -63,14 +63,13 @@ def outs_equity(rng: random.Random) -> Item:
     cards = rng.choice([1, 2])
     exact = _exact_equity(outs, cards)
     rule = outs * (4 if cards == 2 else 2)
-    plural = "card" if cards == 1 else "cards"
-    street = "on the flop" if cards == 2 else "on the turn"
     name = DRAW_NAMES.get(outs)
-    lead = f"{name.capitalize()} ({outs} outs)" if name else f"{outs} outs"
+    lead = f"You hold {name}, {outs} outs." if name else f"You have {outs} outs."
+    tail = "One card to come. What is your chance of hitting?" if cards == 1 else "Two cards to come. What is your chance of hitting by the river?"
     return Item(
         key=f"outs_equity:{outs}:{cards}",
         drill="outs_equity",
-        prompt=f"{lead} {street}, {cards} {plural} to come. Equity (%)?",
+        prompt=f"{lead} {tail} Answer in %.",
         answer=exact,
         explanation=(
             f"rule of 4 and 2: {outs} x {4 if cards == 2 else 2} = {rule}% "
@@ -92,7 +91,7 @@ def ev_call(rng: random.Random) -> Item:
     return Item(
         key=f"ev_call:{pot}:{call}:{eq}",
         drill="ev_call",
-        prompt=f"Pot ${pot:,}, ${call:,} to call, {eq}% equity. EV of calling ($)?",
+        prompt=f"There is ${pot:,} in the pot and it costs ${call:,} to call. You win {eq}% of the time. On average, how much does calling make or lose? Answer in $. Negative if it loses.",
         answer=answer,
         explanation=(
             f"win {eq}% of ${pot} = {fmt(round(p * pot, 2))}; lose {100 - eq}% of ${call} = {fmt(round((1 - p) * call, 2))}; "
@@ -118,7 +117,7 @@ def implied_odds(rng: random.Random) -> Item:
     return Item(
         key=f"implied_odds:{pot}:{call}:{eq}",
         drill="implied_odds",
-        prompt=f"Pot ${pot:,}, ${call:,} to call, {eq}% equity. Extra you must win later to break even ($)?",
+        prompt=f"There is ${pot:,} in the pot and it costs ${call:,} to call. You win {eq}% of the time, so the pot alone does not justify a call. How much more would you need to win on later streets for the call to break even? Answer in $.",
         answer=answer,
         explanation=(
             f"you need the total pot to be call / equity = {call} / {p} = {fmt(round(call / p, 2))}; "
@@ -135,19 +134,22 @@ RANKS = ["A", "K", "Q", "J", "T", "9", "8"]
 
 def combos(rng: random.Random) -> Item:
     kind = rng.choice(["pair", "suited", "offsuit", "any", "pair_blocked", "any_blocked"])
-    r1, r2 = rng.sample(RANKS, 2)
+    r1, r2 = sorted(rng.sample(RANKS, 2), key=RANKS.index)
+    pair_name = {"A": "aces", "K": "kings", "Q": "queens", "J": "jacks", "T": "tens", "9": "nines", "8": "eights"}[r1]
+    art = "an" if r1 == "A" else "a"
+    num = "Answer with a number."
     if kind == "pair":
-        prompt, answer, how = f"How many combos of {r1}{r1} (pocket pair)?", 6, f"4 {r1}s, choose 2: 4 x 3 / 2 = 6"
+        prompt, answer, how = f"How many ways can someone hold pocket {pair_name}? {num}", 6, f"4 {r1}s, choose 2: 4 x 3 / 2 = 6"
     elif kind == "suited":
-        prompt, answer, how = f"How many combos of {r1}{r2} suited?", 4, "one per suit = 4"
+        prompt, answer, how = f"How many ways can someone hold {r1}{r2} suited? {num}", 4, "one per suit = 4"
     elif kind == "offsuit":
-        prompt, answer, how = f"How many combos of {r1}{r2} offsuit?", 12, "4 x 4 = 16 total, minus 4 suited = 12"
+        prompt, answer, how = f"How many ways can someone hold {r1}{r2} offsuit? {num}", 12, "4 x 4 = 16 total, minus 4 suited = 12"
     elif kind == "any":
-        prompt, answer, how = f"How many combos of {r1}{r2} (suited or not)?", 16, f"4 {r1}s x 4 {r2}s = 16"
+        prompt, answer, how = f"How many ways can someone hold {r1}{r2}, suited or not? {num}", 16, f"4 {r1}s x 4 {r2}s = 16"
     elif kind == "pair_blocked":
-        prompt, answer, how = f"You hold one {r1}. How many combos of {r1}{r1} can an opponent have?", 3, f"3 {r1}s left, choose 2: 3 x 2 / 2 = 3"
+        prompt, answer, how = f"You hold {art} {r1}. How many ways can your opponent hold pocket {pair_name}? {num}", 3, f"3 {r1}s left, choose 2: 3 x 2 / 2 = 3"
     else:
-        prompt, answer, how = f"You hold one {r1}. How many combos of {r1}{r2} can an opponent have?", 12, f"3 {r1}s left x 4 {r2}s = 12"
+        prompt, answer, how = f"You hold {art} {r1}. How many ways can your opponent hold {r1}{r2}? {num}", 12, f"3 {r1}s left x 4 {r2}s = 12"
     return Item(
         key=f"combos:{kind}:{r1}:{r2}",
         drill="combos",

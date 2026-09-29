@@ -47,3 +47,21 @@ test("stats per drill", () => {
   s.record(item(), { ...attempt(false), seconds: 4 });
   assert.deepEqual(s.statsByDrill(), [{ drill: "pot_odds", attempts: 2, accuracy: 50, avgSeconds: 3 }]);
 });
+
+test("progress extras: days, weekly history, bests, overrides round-trip", () => {
+  const st = fakeStorage();
+  const s = new Store(st);
+  s.markDay("2026-09-29"); s.markDay("2026-09-29");
+  s.addWeekly({ week: "2026-09-27", score: 8, total: 10, ts: 1 });
+  assert.equal(s.recordBest("poker", 55), true, "first time is a best");
+  assert.equal(s.recordBest("poker", 60), false, "slower is not");
+  assert.equal(s.recordBest("poker", 50), true);
+  s.unlock("betting");
+  s.save();
+  const s2 = new Store(st);
+  assert.deepEqual(s2.days, ["2026-09-29"]);
+  assert.deepEqual(s2.weekly, [{ week: "2026-09-27", score: 8, total: 10, ts: 1 }]);
+  assert.deepEqual(s2.bests, { poker: 50 });
+  assert.deepEqual(s2.unlocked, ["betting"]);
+  assert.deepEqual(s2.starredKeys(), []);
+});

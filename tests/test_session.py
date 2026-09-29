@@ -7,7 +7,7 @@ from applied_math.store import Attempt, Store
 
 
 def starred_item(key="pot_odds:30:10"):
-    return Item(key=key, drill="pot_odds", prompt="Pot is $30 and it's $10 to call. Break-even equity (%)?", answer=25.0, explanation="e", abs_tol=0.6)
+    return Item(key=key, drill="pot_odds", prompt="There is $30 in the pot. It costs you $10 to call. How often do you need to win for calling to break even? Answer in %.", answer=25.0, explanation="e", abs_tol=0.6)
 
 
 def test_starred_items_come_first_and_queue_has_no_duplicates(tmp_path: Path):

@@ -1,6 +1,6 @@
 # Plan: clearer wording, gamification, wider real-world scope
 
-Date: 2026-09-29. A plan, not a build. Nothing below is implemented yet. Approve, cut, or reorder, then it gets built in the order in section 5.
+Date: 2026-09-29. Approved the same day (wording as written, Sunday checks, made-up business numbers) and built in the web version: sections 2, 3a, and packs A through E. Pack F is not built. The terminal version got the wording only (section 2); it is now the plain drill runner and the web page is the main product.
 
 ## 1. Fresh look at what exists
 

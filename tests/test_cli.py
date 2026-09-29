@@ -62,7 +62,7 @@ def test_stats_and_stars_commands(tmp_path: Path):
     assert any("pot_odds: 1 attempts" in line for line in out)
     ask, say, out = scripted([])
     assert main(["stars", "--data", data], ask=ask, say=say) == 0
-    assert any("Pot is" in line for line in out)
+    assert any("There is $" in line for line in out)
 
 
 def test_list_command_names_groups_and_drills():
@@ -101,7 +101,7 @@ def test_session_summary_lists_starred_prompts(tmp_path: Path):
     ask, say, out = scripted(["-999"])
     main(["drill", "pot_odds", "-n", "1", "--type", "--data", str(tmp_path / "p.json"), "--seed", "2"], ask=ask, say=say)
     text = "\n".join(out)
-    assert "Starred for next time" in text and "Pot is" in text.split("Starred for next time")[1]
+    assert "Starred for next time" in text and "There is $" in text.split("Starred for next time")[1]
 
 
 def test_explain_command_prints_index_card():

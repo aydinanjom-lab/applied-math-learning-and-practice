@@ -19,7 +19,7 @@ def percent_of(rng: random.Random) -> Item:
     return Item(
         key=f"percent_of:{pct}:{base}",
         drill="percent_of",
-        prompt=f"What is {pct}% of {base:,}?",
+        prompt=f"What is {pct}% of {base:,}? Answer with a number.",
         answer=answer,
         explanation=f"10% of {base:,} is {fmt(ten)}; {pct}% is {fmt(pct / 10)} x that = {fmt(answer)}",
     )
@@ -29,13 +29,16 @@ DENOMINATORS = [3, 4, 5, 6, 7, 8, 9, 11, 12, 16]
 
 
 def fraction_to_decimal(rng: random.Random) -> Item:
-    d = rng.choice(DENOMINATORS)
-    n = rng.randint(1, d - 1)
+    while True:
+        d = rng.choice(DENOMINATORS)
+        n = rng.randint(1, d - 1)
+        if math.gcd(n, d) == 1:
+            break
     answer = n / d
     return Item(
         key=f"fraction_to_decimal:{n}:{d}",
         drill="fraction_to_decimal",
-        prompt=f"{n}/{d} as a decimal?",
+        prompt=f"What is {n}/{d} as a decimal? Answer with a number.",
         answer=answer,
         explanation=f"1/{d} = {1 / d:.3f}, so {n}/{d} = {n} x {1 / d:.3f} = {answer:.3f}",
         abs_tol=0.006,  # two-decimal answers count
@@ -61,7 +64,7 @@ def multiply_shortcuts(rng: random.Random) -> Item:
     return Item(
         key=f"multiply_shortcuts:{kind}:{a}:{b}",
         drill="multiply_shortcuts",
-        prompt=f"{a} x {b}?",
+        prompt=f"What is {a} x {b}? Answer with a number.",
         answer=float(answer),
         explanation=f"{how} | exact: {a} x {b} = {answer:,}",
     )
@@ -80,7 +83,7 @@ def growth_rate(rng: random.Random) -> Item:
         return Item(
             key=f"growth_rate:pct:{a}:{fmt(b)}",
             drill="growth_rate",
-            prompt=f"From {a:,} to {fmt(b)}, what is the growth rate (%)?",
+            prompt=f"Something grows from {a:,} to {fmt(b)}. What is the growth rate? Answer in %.",
             answer=float(r),
             explanation=f"change = {fmt(b)} - {a:,} = {fmt(b - a)}; divided by the start {a:,} = {r}%",
             abs_tol=0.5,
@@ -90,7 +93,7 @@ def growth_rate(rng: random.Random) -> Item:
     return Item(
         key=f"growth_rate:double:{r}",
         drill="growth_rate",
-        prompt=f"At {r}% a year, how many years to double?",
+        prompt=f"At {r}% a year, how many years until it doubles? Answer in years.",
         answer=72 / r,
         explanation=f"rule of 72: 72 / {r} = {fmt(72 / r)} years | exact: ln 2 / ln(1.{r:02d}) = {exact:.1f} years",
         abs_tol=1.0,
@@ -107,7 +110,7 @@ def back_of_envelope(rng: random.Random) -> Item:
         return Item(
             key=f"back_of_envelope:multiple:{ev}:{e}",
             drill="back_of_envelope",
-            prompt=f"EV ${ev:,}M, EBITDA ${e:,}M. EV/EBITDA?",
+            prompt=f"A company is worth ${ev:,}M in total (its enterprise value) and earns ${e:,}M of EBITDA. What is its EV/EBITDA multiple? Answer with a number.",
             answer=float(mult),
             explanation=f"EV / EBITDA = {ev:,} / {e:,} = {mult}x | enterprise value is what the whole business costs, debt included",
             rel_tol=0.05,
@@ -119,7 +122,7 @@ def back_of_envelope(rng: random.Random) -> Item:
         return Item(
             key=f"back_of_envelope:ebitda:{rev}:{margin}",
             drill="back_of_envelope",
-            prompt=f"Revenue ${rev:,}M at a {margin}% EBITDA margin. EBITDA ($M)?",
+            prompt=f"A company has ${rev:,}M of revenue and a {margin}% EBITDA margin. What is its EBITDA? Answer in $M.",
             answer=ans,
             explanation=f"{margin}% of {rev:,} = {fmt(ans)} | margin is profit as a share of revenue",
             rel_tol=0.05,
@@ -131,7 +134,7 @@ def back_of_envelope(rng: random.Random) -> Item:
         return Item(
             key=f"back_of_envelope:mktcap:{price}:{shares}",
             drill="back_of_envelope",
-            prompt=f"Share price ${price}, {shares:,}M shares. Market cap ($M)?",
+            prompt=f"A stock trades at ${price} and there are {shares:,}M shares. What is the market cap? Answer in $M.",
             answer=ans,
             explanation=f"{price} x {shares:,} = {fmt(ans)} | market cap is the price of all the equity",
             rel_tol=0.05,
@@ -142,7 +145,7 @@ def back_of_envelope(rng: random.Random) -> Item:
     return Item(
         key=f"back_of_envelope:interest:{debt}:{rate}",
         drill="back_of_envelope",
-        prompt=f"${debt:,}M of debt at {rate}%. Annual interest expense ($M)?",
+        prompt=f"A company has ${debt:,}M of debt at {rate}% interest. What does it pay in interest each year? Answer in $M.",
         answer=ans,
         explanation=f"{rate}% of {debt:,} = {fmt(ans)} | interest expense is the yearly cost of the debt",
         rel_tol=0.05,
