@@ -100,9 +100,11 @@ function header() {
   const right = session.results.filter((r) => r.correct).length;
   const item = session.items[session.i];
   const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday check" : null;
-  return el("div", { class: "topbar" },
+  const pct = Math.round((session.i / session.items.length) * 100);
+  return [el("div", { class: "topbar" },
     el("span", { class: "muted num" }, `${label ? label + " · " : ""}${session.i + 1} / ${session.items.length} · ${right} right`),
-    store.isStarred(item.key) ? el("span", { class: "star small" }, "starred") : el("button", { class: "link small", onclick: finish }, "End early"));
+    store.isStarred(item.key) ? el("span", { class: "star small" }, "starred") : el("button", { class: "link small", onclick: finish }, "End early")),
+    el("div", { class: "progress", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, el("span", { style: `width:${pct}%` }))];
 }
 
 function nextItem() {

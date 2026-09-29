@@ -40,6 +40,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | 23 Node tests and 56 Python tests, written before the drill packs, game logic, and store changes. |
 | `run` (browser driving) | Full run in Chromium at phone width with the clock set to a Sunday: interview run, a choice-style question, the weekly check, the unlock override. |
 
+## Used for the palette revamp (2026-09-29)
+
+| Skill | What it was used for |
+|---|---|
+| `ui-ux-pro-max` | Palette, style, and typography searches. Took the "one accent, calm neutrals, semantic green and red" pattern and the Lexend readability font; rejected the purple study palette as too loud. |
+| Web research | Duolingo (flat bottom shadow on buttons, mid-gray body so green and red carry meaning), Brilliant (cool near-black dark canvas, never pure black, mono for numbers), Quizlet (single periwinkle accent on white). |
+| `run` (browser driving) | Light and dark screenshots at phone width before shipping. |
+
 ## Still to use
 
 | Skill | When |
