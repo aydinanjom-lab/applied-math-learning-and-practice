@@ -15,10 +15,12 @@ CALL_FRACTIONS = [(1, 4), (1, 3), (1, 2), (2, 3), (3, 4), (1, 1)]
 
 
 def _pot_and_call(rng: random.Random) -> tuple[int, int]:
-    pot = rng.choice(POTS)
-    num, den = rng.choice(CALL_FRACTIONS)
-    call = pot * num // den
-    return pot, max(call, 5)
+    """Pot and call sizes that divide cleanly, so the ratio is one you would say at a table."""
+    while True:
+        pot = rng.choice(POTS)
+        num, den = rng.choice(CALL_FRACTIONS)
+        if (pot * num) % den == 0 and (pot * num // den) % 5 == 0:
+            return pot, pot * num // den
 
 
 def pot_odds(rng: random.Random) -> Item:

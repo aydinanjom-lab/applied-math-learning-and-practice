@@ -88,3 +88,10 @@ def test_outs_prompts_name_common_draws():
     prompts = " ".join(it.prompt for it in items(poker.outs_equity, 500)).lower()
     assert "flush draw" in prompts and "open-ended straight draw" in prompts and "gutshot" in prompts
     assert "on the flop" in prompts and "on the turn" in prompts
+
+
+def test_pot_odds_uses_clean_ratios():
+    for it in items(poker.pot_odds, 500):
+        pot, call = (int(x) for x in it.key.split(":")[1:])
+        assert (pot * 12) % call == 0, f"{pot}:{call} is not a clean ratio"
+        assert call % 5 == 0
