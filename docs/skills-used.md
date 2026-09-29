@@ -17,6 +17,13 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `executing-plans` | Ran the plans task by task in this session: engine, poker drills, CLI, quick-math drills. |
 | `test-driven-development` | Every module: wrote the test file, ran it to see it fail, wrote the code, ran it green, committed. 41 tests. |
 
+## Used for the usability pass (2026-09-29)
+
+| Skill | What it was used for |
+|---|---|
+| `ui-ux-pro-max` | Checked for terminal-relevant rules. Two carried over: never signal by color alone (every mark has a symbol and a word), and every error says how to recover. The rest is web and mobile guidance, not applicable yet; revisit for the phone front end. |
+| `test-driven-development` | Menu, colors, timer, star messages, explain command, named draws, clean pot ratios: each test-first. 55 tests. |
+
 ## Still to use
 
 | Skill | When |
