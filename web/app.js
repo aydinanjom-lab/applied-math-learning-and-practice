@@ -8,6 +8,9 @@ import { SUPABASE } from "./config.js";
 import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
 
 const app = document.getElementById("app");
+const bar = document.createElement("div"); bar.className = "actionbar"; bar.hidden = true; document.body.append(bar);
+const MARK = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 64 64"); s.setAttribute("aria-hidden", "true");
+  s.innerHTML = '<g transform="rotate(-8 32 32)"><path d="M10 10 H40 L54 24 V54 H10 Z" fill="currentColor"/><path d="M40 10 V24 H54 Z" fill="#4f46e5"/></g>'; return s; };
 const store = new Store(window.localStorage);
 const sync = new SyncClient(SUPABASE);
 const syncState = { user: null, last: null, error: null, busy: false };
@@ -40,7 +43,9 @@ async function startSync() {
     if (syncState.user) { store.onSave = scheduleSync; await pullAndMerge(); if (document.querySelector("h1")?.textContent === "Napkin") home(true); }
   } catch (e) { syncState.error = e.message ?? String(e); }
 }
-const state = { group: "interview", mode: "say", count: 10 };
+const saved = (() => { try { return JSON.parse(localStorage.getItem("napkin_state") || "{}"); } catch { return {}; } })();
+const state = { group: saved.group ?? "interview", mode: saved.mode ?? "say", count: saved.count ?? 10 };
+const remember = () => { try { localStorage.setItem("napkin_state", JSON.stringify(state)); } catch {} };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
 const HOME_ORDER = ["interview", "poker", "quick", "banking", "accounting", "betting", "moose", "novyx", "energy", "all"];
@@ -57,8 +62,18 @@ const el = (tag, attrs = {}, ...children) => {
 };
 // render redraws in place and keeps the scroll position; screen() is for moving to a new screen.
 const render = (...nodes) => { app.replaceChildren(...nodes.flat().filter((n) => n !== null && n !== undefined && n !== false)); };
+// Primary actions live in a fixed bottom bar, where the thumb is. setBar(null) hides it; settle=true ignores taps for 200ms
+// so a tap meant for the button that was just there cannot land on its replacement.
+function setBar(nodes, settle = false) {
+  const list = (nodes ?? []).flat().filter((n) => n !== null && n !== undefined && n !== false);
+  if (!list.length) { bar.hidden = true; bar.replaceChildren(); return; }
+  bar.hidden = false;
+  bar.replaceChildren(el("div", { class: "inner" }, ...list));
+  if (settle) { bar.classList.add("settling"); setTimeout(() => bar.classList.remove("settling"), 200); }
+}
 const screen = (...nodes) => {
   render(...nodes);
+  setBar(null);
   window.scrollTo(0, 0);
   const focus = app.querySelector("[autofocus], h1, .prompt");
   if (focus) { if (!focus.hasAttribute("tabindex") && !focus.matches("button,input")) focus.setAttribute("tabindex", "-1"); focus.focus({ preventScroll: true }); }
@@ -69,7 +84,7 @@ const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], stor
 
 // ---------- home ----------
 function welcome() {
-  const pick = (goal, title, sub) => el("button", { onclick: () => { store.goal = goal; state.group = defaultGroupForGoal(goal); store.save(); home(); } },
+  const pick = (goal, title, sub) => el("button", { onclick: () => { store.goal = goal; state.group = defaultGroupForGoal(goal); remember(); store.save(); home(); } },
     el("span", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, sub)));
   screen(
     el("h1", {}, "Napkin"),
@@ -90,7 +105,7 @@ function home(keepScroll = false) {
   const days = streak(store.days);
   const due = weeklyCheckDue(new Date(), store.weekly);
   const choice = (key, on, title, sub, pressed) =>
-    el("button", { "aria-pressed": String(pressed), onclick: () => { state[key] = on; home(true); } },
+    el("button", { "aria-pressed": String(pressed), onclick: () => { state[key] = on; remember(); home(true); } },
       el("span", { class: "choice" }, el("span", { class: "title" }, title), sub ? el("span", { class: "muted small" }, sub) : null));
 
   const setButton = (g) => {
@@ -102,21 +117,26 @@ function home(keepScroll = false) {
         el("div", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, `Locked until ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} is Solid on every drill.`)),
         el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); home(true); } }, "Unlock anyway"));
     }
-    return el("button", { "aria-pressed": String(state.group === g), onclick: () => { state.group = g; home(true); } },
+    return el("button", { "aria-pressed": String(state.group === g), onclick: () => { state.group = g; remember(); home(true); } },
       el("span", { class: "choice" },
         el("span", { class: "titlerow" }, el("span", { class: "title" }, title), level ? el("span", { class: `badge l${LEVELS.indexOf(level)}` }, level) : null),
         el("span", { class: "muted small" }, sub)));
   };
 
+  const todayDone = store.days.includes(dayKey(new Date()));
+  const startLabel = `Start · ${GROUP_LABELS[state.group][0]} · ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`;
   (keepScroll ? render : screen)(
-    el("div", { class: "topbar" }, el("h1", {}, "Napkin"), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
-    el("p", { class: "muted" }, "Ten minutes. Say it out loud, then check."),
-    due ? el("div", { class: "card notice" },
+    el("div", { class: "topbar" }, el("div", { class: "brand" }, MARK(), el("h1", {}, "Napkin")), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
+    el("div", { class: "status num" },
+      el("span", {}, todayDone ? "Today: done" : "Today: not yet"),
+      el("span", {}, starred ? el("strong", {}, `${starred} starred`) : "Nothing starred"),
+      due ? el("span", { class: "star" }, "Sunday check due") : null),
+    el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, startLabel),
+    starred ? el("p", { class: "small muted", style: "margin-top:8px" }, `${starred} starred kind${starred === 1 ? "" : "s"} come first.`) : null,
+    due ? el("div", { class: "card notice", style: "margin-top:16px" },
       el("div", { class: "title" }, "Sunday check"),
       el("p", { class: "muted small" }, "Ten typed questions from what you have started. This is the honest score."),
       el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
-    el("button", { class: "card action", onclick: runsMenu },
-      el("span", { class: "choice" }, el("span", { class: "title" }, "Interview runs"), el("span", { class: "muted small" }, "Poker, finance, or accounting. Three typed answers against the clock, pass or fail."))),
     el("h2", {}, "What do you want to drill?"),
     el("div", { class: "stack" }, HOME_ORDER.map(setButton)),
     el("h2", {}, "How do you answer?"),
@@ -125,18 +145,19 @@ function home(keepScroll = false) {
       choice("mode", "type", "Type it", "Counts toward levels", state.mode === "type")),
     el("h2", {}, "How many?"),
     el("div", { class: "row" }, [5, 10, 20].map((n) => choice("count", n, String(n), n === 5 ? "quick hit" : n === 10 ? "about 5 min" : "long", state.count === n))),
-    el("div", { style: "height:24px" }),
-    el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, "Start"),
-    starred ? el("p", { class: "small star", style: "margin-top:12px" }, `${starred} starred item${starred === 1 ? "" : "s"} will come first.`) : null,
+    el("h2", {}, "Interview runs"),
+    el("button", { class: "card action", onclick: runsMenu },
+      el("span", { class: "choice" }, el("span", { class: "title" }, "Poker, finance, or accounting"), el("span", { class: "muted small" }, "Three typed answers against the clock, pass or fail."))),
     el("div", { class: "spacer" }),
-    el("div", { class: "row" },
+    el("div", { class: "row", style: "margin-top:24px" },
       el("button", { class: "link", onclick: review }, "Starred"),
       el("button", { class: "link", onclick: stats }, "Stats"),
-      el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
       el("button", { class: "link", onclick: lessonsList }, "Lessons"),
+      el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
       el("button", { class: "link", onclick: about }, "About"),
       el("button", { class: "link", onclick: account }, syncState.user ? "Account ✓" : "Account"))
   );
+  if (!keepScroll) setBar(null);
 }
 
 function account() {
@@ -179,6 +200,7 @@ function account() {
   input.focus();
 }
 
+
 function lessonsList() {
   screen(
     el("h1", {}, "Lessons"),
@@ -215,10 +237,10 @@ function lesson(id, back) {
     ...l.examples.map((x) => el("p", { class: "num" }, x)),
     el("h2", {}, "When it works"), el("p", {}, l.when),
     el("h2", {}, "The trap"), el("p", {}, l.trap),
-    el("button", { class: "primary", onclick: tryThree }, "Try three, typed"),
     el("p", { class: "muted small", style: "margin-top:16px" }, "This is the tool's explanation. Write your own in your notes without looking; if you can't, you don't own it yet."),
     el("button", { class: "link", onclick: back ?? (() => home()) }, "Back")
   );
+  setBar([el("button", { class: "primary", onclick: tryThree }, "Try three, typed")]);
 }
 
 function about() {
@@ -254,9 +276,9 @@ function introScreen() {
     el("h2", {}, "First time on these drills"),
     el("p", { class: "muted" }, "One line each. You will not see this again."),
     SET_NOTES[session.group] ? el("p", { class: "star small" }, SET_NOTES[session.group]) : null,
-    ...session.intros.map((n) => el("div", { class: "definition" }, el("strong", {}, nice(n)), el("br"), DEFINITIONS[n])),
-    el("button", { class: "primary", onclick: () => { session.intros.forEach((n) => store.markIntroShown(n)); store.save(); nextItem(); } }, "Got it, start")
+    ...session.intros.map((n) => el("div", { class: "definition" }, el("strong", {}, nice(n)), el("br"), DEFINITIONS[n]))
   );
+  setBar([el("button", { class: "primary", onclick: () => { session.intros.forEach((n) => store.markIntroShown(n)); store.save(); nextItem(); } }, "Got it, start")]);
 }
 
 function header() {
@@ -279,32 +301,32 @@ function nextItem() {
   if (session.mode === "say") {
     const reveal = () => {
       const secs = seconds();
-      screen(
+      render(
         header(),
         el("div", { class: "prompt" }, item.prompt),
         el("div", { class: "answer num" }, display(item)),
         el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
-        el("p", { class: "num" }, el("strong", {}, `${secs.toFixed(1)}s`), el("span", { class: "muted" }, " · Did you have it?")),
-        el("div", { class: "row" },
-          el("button", { class: "ok", onclick: () => grade(item, true, secs) }, "✓ Yes, I had it"),
-          el("button", { class: "miss", onclick: () => grade(item, false, secs) }, "✗ No, missed it"))
+        el("p", { class: "num" }, el("strong", {}, `${secs.toFixed(1)}s`), el("span", { class: "muted" }, " · Did you have it?"))
       );
+      setBar([el("div", { class: "pair" },
+        el("button", { class: "ok", onclick: () => grade(item, true, secs) }, "✓ Yes, I had it"),
+        el("button", { class: "miss", onclick: () => grade(item, false, secs) }, "✗ No, missed it"))], true);
       keys({ y: () => grade(item, true, secs), n: () => grade(item, false, secs) });
     };
-    screen(header(), el("div", { class: "prompt" }, item.prompt), el("p", { class: "muted" }, "Say the answer out loud, then reveal."),
-      el("button", { class: "primary", onclick: reveal, autofocus: "" }, "Reveal"));
+    screen(header(), el("div", { class: "prompt" }, item.prompt), el("p", { class: "muted" }, "Say the answer out loud, then reveal."));
+    setBar([el("button", { class: "primary", onclick: reveal, autofocus: "" }, "Reveal")]);
     keys({ Enter: reveal, " ": reveal });
     return;
   }
 
   if (item.choices) {
-    screen(header(), el("div", { class: "prompt" }, item.prompt),
-      el("div", { class: "row" }, item.choices.map((c, idx) => el("button", { class: "primary", onclick: () => grade(item, isCorrect(item, idx), seconds(), c) }, c))));
+    screen(header(), el("div", { class: "prompt" }, item.prompt), el("p", { class: "muted" }, "Pick one."));
+    setBar(item.choices.map((c, idx) => el("button", { class: "primary", onclick: () => grade(item, isCorrect(item, idx), seconds(), c) }, c)));
     keys({});
     return;
   }
 
-  const input = el("input", { type: "text", inputmode: "decimal", autocomplete: "off", placeholder: "your answer", "aria-label": "your answer" });
+  const input = el("input", { type: "text", inputmode: "decimal", autocomplete: "off", autocorrect: "off", spellcheck: "false", enterkeyhint: "done", placeholder: "your answer", "aria-label": "your answer" });
   const submit = () => {
     const secs = seconds();
     const given = parseAnswer(input.value);
@@ -312,7 +334,8 @@ function nextItem() {
     grade(item, isCorrect(item, given), secs, input.value);
   };
   screen(header(), el("div", { class: "prompt" }, item.prompt),
-    el("form", { onsubmit: (e) => { e.preventDefault(); submit(); } }, input, el("div", { style: "height:12px" }), el("button", { class: "primary", type: "submit" }, "Check")));
+    el("form", { id: "ansform", onsubmit: (e) => { e.preventDefault(); submit(); } }, input));
+  setBar([el("button", { class: "primary", type: "submit", form: "ansform" }, "Check")]);
   input.focus();
   keys({});
 }
@@ -347,12 +370,12 @@ function grade(item, correct, secs, typed) {
     el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
     fam.method && !correct ? el("p", { class: "method" }, el("strong", {}, "Method: "), fam.method) : null,
     status,
-    el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish"),
     !correct && session.kind === "drill" ? el("div", { class: "row", style: "margin-top:8px" },
       el("button", { onclick: tryOne }, "Try one like it now"),
       lessonId ? el("button", { onclick: () => lesson(lessonId, () => grade(item, correct, secs, typed)) }, store.lessonsRead.includes(lessonId) ? "Read the method again" : "Read the one-minute method") : null) : null,
     el("a", { class: "muted small", style: "margin-top:12px", href: `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Napkin: wrong answer? " + item.key)}&body=${encodeURIComponent(item.prompt + "\n\nShown answer: " + display(item) + "\n\nWhat I think is right:\n")}` }, "Think this answer is wrong? Report it.")
   );
+  setBar([el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish")], true);
   keys({ Enter: next, " ": next });
 }
 
@@ -392,11 +415,13 @@ function finish() {
     starred.length ? el("h2", {}, "Starred for next time") : null,
     ...starred.slice(0, 8).map((st) => el("p", { class: "small" }, el("strong", {}, (FAMILIES[st.family]?.name ?? nice(st.drill)) + ": "), el("span", { class: "muted" }, st.example))),
     starred.length > 8 ? el("p", { class: "muted small" }, `and ${starred.length - 8} more`) : null,
-    el("div", { style: "height:24px" }),
+    el("div", { style: "height:24px" })
+  );
+  setBar([
     session.kind === "drill" ? el("button", { class: "primary", onclick: () => startSession(session.group, session.mode, session.items.length) }, "Again") : null,
     session.kind === "lesson" ? el("button", { class: "primary", onclick: lessonsList }, "Back to lessons") : null,
-    el("button", { class: "link", onclick: home }, "Home")
-  );
+    el("button", { onclick: () => home() }, "Home"),
+  ]);
 }
 
 // ---------- weekly check ----------
@@ -439,10 +464,9 @@ function interviewResult(right, total) {
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 3 correct in ${total.toFixed(0)}s`),
       el("p", { class: "muted" }, pass ? `${run.title} passed under time. Do it again tomorrow.` : right < 3 ? "One wrong answer is a fail in the room. Read the method, then run it again." : `All correct but over ${run.seconds} seconds. Speed comes from reps. Run it again.`)),
     el("div", { style: "height:24px" }),
-    el("button", { class: "primary", onclick: () => startInterview(session.run ?? "poker") }, "Run it again"),
-    el("button", { class: "link", onclick: runsMenu }, "Other runs"),
-    el("button", { class: "link", onclick: home }, "Home")
+    el("button", { class: "link", onclick: runsMenu }, "Other runs")
   );
+  setBar([el("button", { class: "primary", onclick: () => startInterview(session.run ?? "poker") }, "Run it again"), el("button", { onclick: () => home() }, "Home")]);
 }
 
 // ---------- other screens ----------

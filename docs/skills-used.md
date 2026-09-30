@@ -92,6 +92,12 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 |---|---|
 | `deep-research` | Four parallel researchers (typography, buttons and interaction, logo and icon, screen patterns) plus a report writer; produced the plan above with sources and effort estimates. |
 
+## Used for the visual design build, priority 1 (2026-09-30)
+
+| Skill | What it was used for |
+|---|---|
+| `run` (browser driving) | Light and dark checks that Reveal and Yes/No share the same bar position, digits use a tabular font, the answer is 42px, dark mode has no shadows; caught a function I had accidentally cut. |
+
 ## Still to use
 
 | Skill | When |

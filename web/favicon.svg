@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>path.paper { fill: #1c1b18; } @media (prefers-color-scheme: dark) { path.paper { fill: #f6f4ee; } }</style>
+  <g transform="rotate(-8 32 32)">
+    <path class="paper" d="M10 10 H40 L54 24 V54 H10 Z"/>
+    <path d="M40 10 V24 H54 Z" fill="#4f46e5"/>
+  </g>
+</svg>

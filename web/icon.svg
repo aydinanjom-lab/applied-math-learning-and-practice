@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#4f46e5"/>
-  <rect x="96" y="120" width="320" height="272" rx="28" fill="#f6f4ee" transform="rotate(-4 256 256)"/>
-  <text x="256" y="290" font-family="Lexend, -apple-system, Helvetica, Arial, sans-serif" font-size="150" font-weight="700" text-anchor="middle" fill="#1c1b18">25%</text>
+  <rect width="512" height="512" fill="#4f46e5"/>
+  <g transform="rotate(-8 256 256)">
+    <path d="M128 128 H312 L384 200 V384 H128 Z" fill="#f6f4ee"/>
+    <path d="M312 128 V200 H384 Z" fill="#3b32c9"/>
+  </g>
 </svg>

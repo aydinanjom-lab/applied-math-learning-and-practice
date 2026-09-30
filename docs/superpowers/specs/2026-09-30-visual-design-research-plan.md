@@ -50,6 +50,8 @@ The pattern across all four areas is that Napkin's designer chose well on the th
 
 ## Implementation plan
 
+**Status 2026-09-30:** all priority-1 items built and deployed (tabular digits via the system stack for `.num`, body 1.4, answer 42px; fixed bottom action bar with matched press geometry and the Yes/No pair replacing Reveal in place; folded-corner icon set with separate maskable files, 180px touch icon, dark-aware SVG favicon plus ICO; Start under a status strip with remembered choices; no shadows in dark mode). Priority 2 and 3 remain.
+
 Priority 1 items are the three headline fixes plus the cheapest wins; 2 is worth doing this month; 3 is polish. Hours assume one person working in plain CSS/JS on the existing files (`web/style.css`, `web/app.js`, `web/index.html`, `web/icon.svg`, `web/manifest.webmanifest`).
 
 ### Typography (about 3.5 h)
