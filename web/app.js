@@ -18,18 +18,20 @@ const el = (tag, attrs = {}, ...children) => {
   for (const c of children.flat()) if (c !== null && c !== undefined && c !== false) node.append(c);
   return node;
 };
-const render = (...nodes) => { app.replaceChildren(...nodes.flat().filter((n) => n !== null && n !== undefined && n !== false)); window.scrollTo(0, 0); };
+// render redraws in place and keeps the scroll position; screen() is for moving to a new screen.
+const render = (...nodes) => { app.replaceChildren(...nodes.flat().filter((n) => n !== null && n !== undefined && n !== false)); };
+const screen = (...nodes) => { render(...nodes); window.scrollTo(0, 0); };
 const display = (it) => (it.choices ? it.choices[it.answer] : fmt(Math.round(it.answer * 10) / 10));
 const nice = (name) => name.replace(/_/g, " ");
 const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], store.starredKeys())];
 
 // ---------- home ----------
-function home() {
+function home(keepScroll = false) {
   const starred = store.starredItems().length;
   const days = streak(store.days);
   const due = weeklyCheckDue(new Date(), store.weekly);
   const choice = (key, on, title, sub, pressed) =>
-    el("button", { "aria-pressed": String(pressed), onclick: () => { state[key] = on; home(); } },
+    el("button", { "aria-pressed": String(pressed), onclick: () => { state[key] = on; home(true); } },
       el("span", { class: "choice" }, el("span", { class: "title" }, title), sub ? el("span", { class: "muted small" }, sub) : null));
 
   const setButton = (g) => {
@@ -39,15 +41,15 @@ function home() {
     if (!unlocked) {
       return el("div", { class: "card locked" },
         el("div", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, `Locked until ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} is Solid on every drill.`)),
-        el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); home(); } }, "Unlock anyway"));
+        el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); home(true); } }, "Unlock anyway"));
     }
-    return el("button", { "aria-pressed": String(state.group === g), onclick: () => { state.group = g; home(); } },
+    return el("button", { "aria-pressed": String(state.group === g), onclick: () => { state.group = g; home(true); } },
       el("span", { class: "choice" },
         el("span", { class: "titlerow" }, el("span", { class: "title" }, title), level ? el("span", { class: `badge l${LEVELS.indexOf(level)}` }, level) : null),
         el("span", { class: "muted small" }, sub)));
   };
 
-  render(
+  (keepScroll ? render : screen)(
     el("div", { class: "topbar" }, el("h1", {}, "Applied Math"), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
     el("p", { class: "muted" }, "Ten minutes. Say it out loud, then check."),
     due ? el("div", { class: "card notice" },
@@ -88,7 +90,7 @@ function startSession(group, mode, count, opts = {}) {
 }
 
 function introScreen() {
-  render(
+  screen(
     el("h2", {}, "First time on these drills"),
     el("p", { class: "muted" }, "One line each. You will not see this again."),
     ...session.intros.map((n) => el("div", { class: "definition" }, el("strong", {}, nice(n)), el("br"), DEFINITIONS[n])),
@@ -116,7 +118,7 @@ function nextItem() {
   if (session.mode === "say") {
     const reveal = () => {
       const secs = seconds();
-      render(
+      screen(
         header(),
         el("div", { class: "prompt" }, item.prompt),
         el("div", { class: "answer num" }, display(item)),
@@ -128,14 +130,14 @@ function nextItem() {
       );
       keys({ y: () => grade(item, true, secs), n: () => grade(item, false, secs) });
     };
-    render(header(), el("div", { class: "prompt" }, item.prompt), el("p", { class: "muted" }, "Say the answer out loud, then reveal."),
+    screen(header(), el("div", { class: "prompt" }, item.prompt), el("p", { class: "muted" }, "Say the answer out loud, then reveal."),
       el("button", { class: "primary", onclick: reveal, autofocus: "" }, "Reveal"));
     keys({ Enter: reveal, " ": reveal });
     return;
   }
 
   if (item.choices) {
-    render(header(), el("div", { class: "prompt" }, item.prompt),
+    screen(header(), el("div", { class: "prompt" }, item.prompt),
       el("div", { class: "row" }, item.choices.map((c, idx) => el("button", { class: "primary", onclick: () => grade(item, isCorrect(item, idx), seconds(), c) }, c))));
     keys({});
     return;
@@ -148,7 +150,7 @@ function nextItem() {
     if (given === null) { input.setCustomValidity("Digits only, like 25 or 33.3"); input.reportValidity(); return; }
     grade(item, isCorrect(item, given), secs, input.value);
   };
-  render(header(), el("div", { class: "prompt" }, item.prompt),
+  screen(header(), el("div", { class: "prompt" }, item.prompt),
     el("form", { onsubmit: (e) => { e.preventDefault(); submit(); } }, input, el("div", { style: "height:12px" }), el("button", { class: "primary", type: "submit" }, "Check")));
   input.focus();
   keys({});
@@ -165,7 +167,7 @@ function grade(item, correct, secs, typed) {
   const status = cleared ? el("p", { class: "star" }, "Star cleared: two clean reps in a row.")
     : !correct ? el("p", { class: "star" }, "Starred. It comes back first next session until you get it twice running.") : null;
   const next = () => { session.i += 1; nextItem(); };
-  render(
+  screen(
     header(),
     el("div", { class: "prompt" }, item.prompt),
     el("div", { class: `mark ${correct ? "ok" : "miss"}` }, `${correct ? "✓ Correct" : "✗ Missed"} · ${secs.toFixed(1)}s`),
@@ -195,7 +197,7 @@ function finish() {
   store.save();
   if (session.kind === "interview") return interviewResult(right, total);
   const starred = store.starredItems();
-  render(
+  screen(
     el("h1", {}, session.kind === "weekly" ? "Sunday check done" : "Session done"),
     el("div", { class: "card" },
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / ${r.length} correct`),
@@ -243,7 +245,7 @@ function startInterview() {
 
 function interviewResult(right, total) {
   const pass = right === 3 && total <= 90;
-  render(
+  screen(
     el("h1", {}, pass ? "Pass" : "Not yet"),
     el("div", { class: "card" },
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 3 correct in ${total.toFixed(0)}s`),
@@ -258,7 +260,7 @@ function interviewResult(right, total) {
 // ---------- other screens ----------
 function review() {
   const items = store.starredItems();
-  render(
+  screen(
     el("h1", {}, "Starred"),
     el("p", { class: "muted" }, items.length ? "Each clears after two correct answers in a row." : "Nothing starred. Good."),
     ...items.map((it) => el("div", { class: "card", style: "margin-bottom:8px" }, el("div", {}, it.prompt), el("div", { class: "muted small" }, `${nice(it.drill)} · clean reps so far: ${store.stars[it.key].streak} / 2`))),
@@ -274,7 +276,7 @@ function stats() {
   const acc = (xs) => (xs.length ? Math.round((100 * xs.filter((a) => a.correct).length) / xs.length) : null);
   const sayAcc = acc(say), typeAcc = acc(type);
   const gap = sayAcc !== null && typeAcc !== null && say.length >= 10 && type.length >= 10 && sayAcc - typeAcc > 10;
-  render(
+  screen(
     el("h1", {}, "Stats"),
     el("div", { class: "card" },
       el("p", { class: "num" }, `Streak: ${streak(store.days)} days · Say mode: ${sayAcc ?? "–"}% · Type mode: ${typeAcc ?? "–"}%`),
@@ -293,7 +295,7 @@ function stats() {
 }
 
 function explain(name) {
-  render(
+  screen(
     el("h1", {}, name === "card" ? "Poker index card" : nice(name)),
     el("pre", {}, EXPLANATIONS[name]),
     name === "card" ? el("div", { class: "row" }, GROUPS.poker.map((n) => el("button", { class: "link", onclick: () => explain(n) }, nice(n)))) : null,
