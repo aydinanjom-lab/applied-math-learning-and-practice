@@ -8,3 +8,5 @@
 - `superpowers/specs/2026-09-30-monetization-council.md`: simulated advisor council on whether to open it up and charge.
 - `superpowers/specs/2026-09-30-full-service-buildout.md`: phased plan to a public, multi-user version, with money switched off until a tripwire fires.
 - `../.agents/product-marketing.md`: positioning context the marketing skills read.
+- `setup-sync.md`: how to turn on accounts and sync (Supabase, five minutes).
+- `superpowers/specs/2026-09-30-phase3-stars-lessons-bank.md`: plan for category stars, a better miss, mini lessons, and the next bank expansion.

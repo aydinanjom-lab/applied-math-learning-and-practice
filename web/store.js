@@ -58,9 +58,19 @@ export class Store {
   isStarred(key) { return Boolean(this.stars[key]); }
   markIntroShown(drill) { if (!this.introShown.includes(drill)) this.introShown.push(drill); }
 
+  snapshot() {
+    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback };
+  }
+  load(data) {
+    this.attempts = data.attempts ?? []; this.stars = data.stars ?? {}; this.introShown = data.intro_shown ?? [];
+    this.days = data.days ?? []; this.weekly = data.weekly ?? []; this.bests = data.bests ?? {}; this.unlocked = data.unlocked ?? [];
+    this.goal = data.goal ?? null; this.sessions = data.sessions ?? 0; this.feedback = data.feedback ?? null;
+  }
+
   save() {
     try {
-      this.storage.setItem(STORAGE_KEY, JSON.stringify({ attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback }));
+      this.storage.setItem(STORAGE_KEY, JSON.stringify(this.snapshot()));
+      this.onSave?.();
     } catch {
       // private mode or full storage: the session still runs, it just won't persist
     }

@@ -33,7 +33,7 @@ answers only (New, Learning, Solid, Fast, Cold), a daily streak with one free sk
 betting math unlocks once poker is Solid on every drill, with an "unlock anyway" link. The betting set is math practice
 only: odds are generated, and nothing is ever recorded as a bet.
 
-**Your data:** saved inside the browser you use, nothing sent anywhere, no trackers. Export from the Stats page. **One limit:** progress is per browser. Your laptop and your phone each keep their own
+**Your data:** saved inside the browser you use, no trackers. Export from the Stats page. **Sync between devices** is optional and off until you connect a free Supabase project (about five minutes, see `docs/setup-sync.md`). Then Account on the home screen signs you in by an emailed link, and your laptop and phone share one record. Your laptop and your phone each keep their own
 record. Practice on one device, or treat the other as scratch. Clearing the browser's site data wipes it.
 
 ## Tests

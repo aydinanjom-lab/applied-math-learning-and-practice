@@ -1,10 +1,43 @@
 // Screens: home -> session -> summary. Also interview run, weekly check, starred, stats, explain.
 import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
 import { Store } from "./store.js";
+import { SyncClient, mergeProgress } from "./sync.js";
+import { SUPABASE } from "./config.js";
 import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
 
 const app = document.getElementById("app");
 const store = new Store(window.localStorage);
+const sync = new SyncClient(SUPABASE);
+const syncState = { user: null, last: null, error: null, busy: false };
+let syncTimer = null;
+
+async function pullAndMerge() {
+  if (!syncState.user) return;
+  syncState.busy = true;
+  try {
+    const remote = await sync.load(syncState.user.id);
+    if (remote) store.load(mergeProgress(store.snapshot(), remote));
+    store.onSave = null; store.save(); store.onSave = scheduleSync;
+    await sync.save(syncState.user.id, store.snapshot());
+    syncState.last = new Date(); syncState.error = null;
+  } catch (e) { syncState.error = e.message ?? String(e); }
+  syncState.busy = false;
+}
+function scheduleSync() {
+  if (!syncState.user) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try { await sync.save(syncState.user.id, store.snapshot()); syncState.last = new Date(); syncState.error = null; }
+    catch (e) { syncState.error = e.message ?? String(e); }
+  }, 1500);
+}
+async function startSync() {
+  if (!sync.configured) return;
+  try {
+    syncState.user = await sync.user();
+    if (syncState.user) { store.onSave = scheduleSync; await pullAndMerge(); if (document.querySelector("h1")?.textContent === "Napkin") home(true); }
+  } catch (e) { syncState.error = e.message ?? String(e); }
+}
 const state = { group: "interview", mode: "say", count: 10 };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
@@ -98,8 +131,49 @@ function home(keepScroll = false) {
       el("button", { class: "link", onclick: review }, "Starred"),
       el("button", { class: "link", onclick: stats }, "Stats"),
       el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
-      el("button", { class: "link", onclick: about }, "About"))
+      el("button", { class: "link", onclick: about }, "About"),
+      el("button", { class: "link", onclick: account }, syncState.user ? "Account ✓" : "Account"))
   );
+}
+
+function account() {
+  if (!sync.configured) {
+    return screen(
+      el("h1", {}, "Account"),
+      el("p", {}, "Sync is not switched on for this copy of Napkin. Your progress stays in this browser."),
+      el("p", { class: "muted small" }, "To share progress between your laptop and phone, follow docs/setup-sync.md in the repository. About five minutes."),
+      el("button", { class: "link", onclick: () => home() }, "Back")
+    );
+  }
+  if (syncState.user) {
+    return screen(
+      el("h1", {}, "Account"),
+      el("div", { class: "card" },
+        el("p", {}, `Signed in as ${syncState.user.email}`),
+        el("p", { class: "muted small num" }, syncState.error ? `Last sync failed: ${syncState.error}` : syncState.last ? `Last synced ${syncState.last.toLocaleTimeString()}` : "Not synced yet"),
+        el("div", { class: "row" },
+          el("button", { onclick: async () => { await pullAndMerge(); account(); } }, "Sync now"),
+          el("button", { onclick: async () => { await sync.signOut(); syncState.user = null; store.onSave = null; home(); } }, "Sign out"))),
+      el("p", { class: "muted small" }, "Signing out leaves this browser's copy in place. Your account copy is untouched."),
+      el("button", { class: "link", onclick: () => home() }, "Back")
+    );
+  }
+  const input = el("input", { type: "email", inputmode: "email", autocomplete: "email", placeholder: "you@iu.edu", "aria-label": "email", required: "" });
+  const status = el("p", { class: "muted small" }, "");
+  screen(
+    el("h1", {}, "Account"),
+    el("p", {}, "Sign in to share your progress between devices. No password: you get a link by email."),
+    el("form", { onsubmit: async (e) => {
+      e.preventDefault();
+      status.textContent = "Sending…";
+      try { await sync.sendMagicLink(input.value.trim()); status.textContent = "Check your email and open the link on this device."; }
+      catch (err) { status.textContent = `Could not send: ${err.message ?? err}`; }
+    } }, input, el("div", { style: "height:12px" }), el("button", { class: "primary", type: "submit" }, "Email me a sign-in link")),
+    status,
+    el("p", { class: "muted small" }, "Progress already in this browser is kept and merged in, not replaced."),
+    el("button", { class: "link", onclick: () => home() }, "Back")
+  );
+  input.focus();
 }
 
 function about() {
@@ -373,3 +447,4 @@ function keys(map) {
 }
 
 home();
+startSync();

@@ -77,3 +77,13 @@ test("goal, session count, and feedback round-trip", () => {
   assert.equal(s2.sessions, 1);
   assert.equal(s2.feedback, "y");
 });
+
+test("snapshot and load round-trip, and save fires onSave", () => {
+  const s = new Store(fakeStorage());
+  let fired = 0; s.onSave = () => fired++;
+  s.record(item(), attempt(false)); s.markDay("2026-09-30"); s.save();
+  const snap = s.snapshot();
+  const s2 = new Store(fakeStorage()); s2.load(snap);
+  assert.deepEqual(s2.snapshot(), snap);
+  assert.equal(fired, 1);
+});

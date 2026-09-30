@@ -71,6 +71,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | 19 new generators (interview follow-ups, banking, accounting), each tested against an independent formula before it was written. 32 tests. |
 | `run` (browser driving) | Drove a 20-item typed accounting session and a 20-item interview session to confirm the new sets render, including the three-way choice questions. |
 
+## Used for Phase 2 (2026-09-30)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | Merge rule (union of attempts, stars rebuilt by replay, fastest best, max sessions) and store snapshot/load, tests first. 37 tests. |
+| `run` (browser driving) | Two-device simulation against a fake backend: magic link, first device pushes, wiped second device pulls streak and stars, sign-out keeps the local copy. |
+| `brainstorming` | Phase 3 plan: three approaches to category stars, the better-miss screen, 18 lessons, open questions. |
+
 ## Still to use
 
 | Skill | When |

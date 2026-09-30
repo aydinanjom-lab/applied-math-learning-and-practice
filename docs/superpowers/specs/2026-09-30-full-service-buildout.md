@@ -36,7 +36,7 @@ The page anyone can land on cold and understand.
 
 Exit: a stranger can open the link on a phone, understand it in ten seconds, finish a session, and come back tomorrow to the same progress.
 
-### Phase 2: Accounts and sync (3 evenings)
+### Phase 2: Accounts and sync (3 evenings) — BUILT 2026-09-30, needs Aydin's Supabase keys to switch on
 
 Fixes the laptop-versus-phone problem and creates the data that proves retention.
 
