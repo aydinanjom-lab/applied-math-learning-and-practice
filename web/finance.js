@@ -162,10 +162,66 @@ const DIRECTION_CASES = [
   ["A customer pays an invoice from last quarter. Net income?", 2, "The revenue was recognised when the sale was made; collecting it only moves receivables into cash."],
   ["The company buys a $200M factory with cash. Net income?", 2, "Buying an asset is capitalised, not expensed; depreciation hits later, a little each year."],
 ];
-export function statement_direction(rng) {
-  const idx = rng.randint(0, DIRECTION_CASES.length - 1);
+export function statement_direction(rng, opts = {}) {
+  const idx = opts.family ? Number(opts.family.split(":")[1]) : rng.randint(0, DIRECTION_CASES.length - 1);
   const [q, answer, why] = DIRECTION_CASES[idx];
-  return item({ key: `statement_direction:${idx}`, drill: "statement_direction",
+  return item({ key: `statement_direction:${idx}`, drill: "statement_direction", family: `statement_direction:${idx}`,
     prompt: `${q} Up, down, or no change?`, choices: ["Up", "Down", "No change"], answer,
     explanation: `${why} | Three-statement questions: an interviewer picks one event and walks you across the income statement, the cash flow statement, and the balance sheet.`, abs_tol: 0 });
+}
+
+// ---------- finance depth ----------
+export function accretion_mix(rng) {
+  const buyerPE = rng.choice([12, 15, 18, 20, 25]);
+  const targetPE = rng.choice([8, 10, 12, 15, 20]);
+  const stockPct = rng.choice([0, 25, 50, 75, 100]);
+  const debtRate = rng.choice([5, 6, 8]);
+  const tax = 25;
+  // buyer's cost of stock = earnings yield; cost of cash = after-tax debt rate; blended cost vs target yield
+  const costStock = 100 / buyerPE, costCash = debtRate * (1 - tax / 100);
+  const blended = (stockPct / 100) * costStock + (1 - stockPct / 100) * costCash;
+  const targetYield = 100 / targetPE;
+  const accretive = targetYield > blended;
+  return item({ key: `accretion_mix:${buyerPE}:${targetPE}:${stockPct}:${debtRate}`, drill: "accretion_mix",
+    prompt: `A buyer at ${buyerPE}x earnings buys a target at ${targetPE}x, paying ${stockPct}% in stock and the rest with debt at ${debtRate}% (tax rate ${tax}%). Accretive or dilutive?`,
+    choices: ["Accretive", "Dilutive"], answer: accretive ? 0 : 1,
+    explanation: `Cost of stock = earnings yield = ${costStock.toFixed(1)}%. Cost of debt after tax = ${costCash.toFixed(1)}%. Blended cost = ${blended.toFixed(1)}%. Target's yield = ${targetYield.toFixed(1)}%. Buying a ${targetYield.toFixed(1)}% yield with ${blended.toFixed(1)}% money is ${accretive ? "accretive" : "dilutive"}. | Compare what the target earns per dollar with what the buyer's money costs per dollar.`, abs_tol: 0 });
+}
+
+export function synergies_breakeven(rng) {
+  const premium = rng.choice([50, 100, 150, 200, 300, 500]);
+  const mult = rng.choice([5, 8, 10, 12, 15]);
+  return item({ key: `synergies_breakeven:${premium}:${mult}`, drill: "synergies_breakeven",
+    prompt: `A buyer pays a $${fmt(premium)}M premium over the target's market value. Peers trade at ${mult}x EBITDA. How much yearly EBITDA in synergies is needed to justify the premium? ${USDM}`, answer: premium / mult,
+    explanation: `${fmt(premium)} / ${mult} = ${fmt(r2(premium / mult))}M a year. | The premium is a price; divide by the multiple to turn it into the yearly profit that price implies.`, rel_tol: 0.03, abs_tol: 0.5 });
+}
+
+export function dcf_two_year(rng) {
+  const c1 = rng.choice([50, 80, 100, 120]), c2 = rng.choice([60, 100, 120, 150]);
+  const tv = rng.choice([500, 800, 1000, 1200, 1500]);
+  const r = rng.choice([8, 10, 12, 15]);
+  const pv = c1 / (1 + r / 100) + (c2 + tv) / (1 + r / 100) ** 2;
+  return item({ key: `dcf_two_year:${c1}:${c2}:${tv}:${r}`, drill: "dcf_two_year",
+    prompt: `Cash flows: $${fmt(c1)}M next year and $${fmt(c2)}M the year after, plus a terminal value of $${fmt(tv)}M at the end of year two. The discount rate is ${r}%. Roughly, what is it all worth today? ${USDM}`, answer: pv,
+    explanation: `Year 1: ${fmt(c1)} / ${1 + r / 100} = ${fmt(r2(c1 / (1 + r / 100)))}. Year 2: (${fmt(c2)} + ${fmt(tv)}) / ${fmt(r2((1 + r / 100) ** 2))} = ${fmt(r2((c2 + tv) / (1 + r / 100) ** 2))}. Total ${fmt(r2(pv))}. | A DCF is this, repeated. The terminal value usually dominates, which is why the rate and growth assumptions matter so much.`, rel_tol: 0.04, abs_tol: 2 });
+}
+
+export function debt_paydown(rng) {
+  const debt = rng.choice([300, 500, 600, 800, 1000]);
+  const pay = rng.choice([40, 50, 60, 80, 100]);
+  const years = rng.choice([3, 4, 5]);
+  if (pay * years > debt) return debt_paydown(rng);
+  return item({ key: `debt_paydown:${debt}:${pay}:${years}`, drill: "debt_paydown",
+    prompt: `A buyout starts with $${fmt(debt)}M of debt and pays down $${fmt(pay)}M a year for ${years} years. How much debt is left at exit? ${USDM}`, answer: debt - pay * years,
+    explanation: `${fmt(debt)} - ${fmt(pay)} x ${years} = ${fmt(debt - pay * years)}. | Every dollar of debt paid down is a dollar more of equity at exit, which is half of how buyouts make money.`, rel_tol: 0.01, abs_tol: 1 });
+}
+
+export function cap_table(rng) {
+  const own = rng.choice([100, 50, 40, 30, 25, 20]);
+  const pre = rng.choice([4, 6, 8, 10, 15, 20]);
+  const raise = rng.choice([1, 2, 3, 4, 5]);
+  const ans = own * (pre / (pre + raise));
+  return item({ key: `cap_table:${own}:${raise}:${pre}`, drill: "cap_table",
+    prompt: `You own ${own}% of a company valued at $${fmt(pre)}M before a raise. It raises $${fmt(raise)}M of new money. What do you own afterwards? ${PCT}`, answer: ans,
+    explanation: `New investors get ${fmt(raise)} / (${fmt(pre)} + ${fmt(raise)}) = ${((raise / (pre + raise)) * 100).toFixed(1)}%. You keep ${own}% x ${fmt(r2(pre / (pre + raise)))} = ${ans.toFixed(1)}%. | Dilution: your share shrinks by the fraction the new money is of the post-money value.`, abs_tol: 0.3 });
 }

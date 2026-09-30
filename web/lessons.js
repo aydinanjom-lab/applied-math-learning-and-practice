@@ -1,0 +1,133 @@
+// One-minute methods. Standard techniques only (Benjamin's Secrets of Mental Math, Trachtenberg, interview-prep anchors).
+// Each: id, title, families it trains, the method in one sentence, worked examples, when it works, one trap.
+export const LESSONS = [
+  {
+    id: "percent_scaling", title: "Percent: start at 10%, then scale", families: ["percent_of", "growth_rate:pct", "back_of_envelope:ebitda", "back_of_envelope:interest", "dividend_yield", "contribution_margin", "contribution_margin:pct", "rate_card"],
+    method: "Find 10% by moving the decimal one place, then build the percent you need from 10%, 5% (half of it), and 1% (a tenth of it).",
+    examples: ["15% of 240: 10% is 24, 5% is 12, so 36.", "35% of 80: 10% is 8, so 30% is 24, plus 5% (4) = 28.", "7% of 300: 1% is 3, so 21."],
+    when: "Any percent of any number. Also for margins, interest, yields, and growth, which are all \"percent of\" in disguise.",
+    trap: "Growth rate divides by the start, not the end. From 80 to 100 is +25%, not +20%.",
+  },
+  {
+    id: "percent_flip", title: "Percent flip: a% of b is b% of a", families: ["percent_of"],
+    method: "Swap the two numbers when the other order is easier.",
+    examples: ["8% of 25 = 25% of 8 = 2.", "16% of 50 = 50% of 16 = 8.", "12% of 75 = 75% of 12 = 9."],
+    when: "Whenever one number is 25, 50, 75, or a clean fraction of 100.",
+    trap: "It only swaps the roles; it does not change the answer's units. 8% of $25 is $2.",
+  },
+  {
+    id: "multiply_by_11", title: "Multiply by 11", families: ["multiply_shortcuts:x11"],
+    method: "Write the two digits apart and put their sum in the middle; if the sum is 10 or more, carry into the left digit.",
+    examples: ["45 x 11: 4 _ 5, middle 9, so 495.", "78 x 11: 7 _ 8, middle 15, carry: 858.", "62 x 11: 6 _ 2, middle 8: 682."],
+    when: "Any two-digit number times 11. For three digits, add each neighbouring pair.",
+    trap: "Forgetting the carry: 78 x 11 is 858, not 7158.",
+  },
+  {
+    id: "multiply_by_5_25_50", title: "Multiply by 5, 25, and 50", families: ["multiply_shortcuts:x25"],
+    method: "By 5: halve, then times 10. By 25: quarter, then times 100. By 50: halve, then times 100.",
+    examples: ["46 x 5: 23, then 230.", "36 x 25: 9, then 900.", "18 x 50: 9, then 900."],
+    when: "Any of the three. For 15: add half, then times 10 (24 x 15: 24 + 12 = 36, so 360).",
+    trap: "Odd numbers halve to a .5; keep it. 47 x 5: 23.5, then 235.",
+  },
+  {
+    id: "squares_ending_in_5", title: "Squares ending in 5", families: ["multiply_shortcuts:sq5"],
+    method: "Take the tens digit, multiply by one more than itself, and append 25.",
+    examples: ["35 squared: 3 x 4 = 12, so 1225.", "65 squared: 6 x 7 = 42, so 4225.", "95 squared: 9 x 10 = 90, so 9025."],
+    when: "Any number ending in 5, including 105 (10 x 11 = 110, so 11025).",
+    trap: "It is tens times (tens + 1), not tens squared.",
+  },
+  {
+    id: "near_100", title: "Multiplying numbers near 100", families: ["near_100"],
+    method: "Note how far each is below 100. Subtract one gap from the other number for the front, multiply the gaps for the back (two digits).",
+    examples: ["97 x 96: gaps 3 and 4. 97 - 4 = 93. 3 x 4 = 12. So 9312.", "98 x 92: gaps 2 and 8. 98 - 8 = 90. 2 x 8 = 16. So 9016.", "94 x 94: gaps 6 and 6. 88 and 36: 8836."],
+    when: "Both numbers within about 10 of 100. Works above 100 too, adding instead of subtracting.",
+    trap: "The back half is always two digits: 3 x 2 = 06, not 6.",
+  },
+  {
+    id: "halve_and_double", title: "Halve one, double the other", families: ["halve_double"],
+    method: "When one number is even, halve it and double the other until the product is easy.",
+    examples: ["16 x 35 = 8 x 70 = 560.", "24 x 15 = 12 x 30 = 360.", "14 x 45 = 7 x 90 = 630."],
+    when: "One factor even and the other ending in 5, or anything that becomes a round number when doubled.",
+    trap: "Halve and double the same number of times, or the product changes.",
+  },
+  {
+    id: "split_the_hard_one", title: "Split the hard one", families: ["split_multiply"],
+    method: "Break one factor into tens and ones, multiply each part, and add.",
+    examples: ["23 x 7 = 20 x 7 + 3 x 7 = 140 + 21 = 161.", "34 x 6 = 180 + 24 = 204.", "47 x 8 = 320 + 56 = 376."],
+    when: "Any two-digit by one-digit product. Say the big part first so you hold less in your head.",
+    trap: "Adding before you have both parts. Finish the tens product, hold it, then do the ones.",
+  },
+  {
+    id: "divide_by_5_25_50", title: "Divide by 5, 25, and 50", families: ["divide_shortcuts:d5", "divide_shortcuts:d25", "divide_shortcuts:d50"],
+    method: "By 5: double, then divide by 10. By 25: times 4, then divide by 100. By 50: double, then divide by 100.",
+    examples: ["345 / 5: 690, then 69.", "275 / 25: 1100, then 11.", "1,350 / 50: 2,700, then 27."],
+    when: "Any of the three, including in money: $2,400 across 25 people is 96 each.",
+    trap: "Doubling then dividing by 10 is the same as dividing by 5. Do not also halve.",
+  },
+  {
+    id: "divide_by_4_and_8", title: "Divide by 4 and 8", families: ["divide_shortcuts:d4", "divide_shortcuts:d8"],
+    method: "Halve twice for 4; halve three times for 8.",
+    examples: ["372 / 4: 186, 93.", "1,000 / 8: 500, 250, 125.", "540 / 4: 270, 135."],
+    when: "Quarters and eighths of anything: quarterly numbers from a yearly figure, EV/EBITDA at 8x.",
+    trap: "Odd halves are fine: 93 / 2 = 46.5. Keep going.",
+  },
+  {
+    id: "fractions_worth_knowing", title: "Fractions worth knowing cold", families: ["fraction_to_decimal"],
+    method: "Memorise 1/n for n up to 12 and for 16, then multiply by the top.",
+    examples: ["1/7 = 0.143, 1/8 = 0.125, 1/9 = 0.111, 1/11 = 0.0909, 1/12 = 0.0833, 1/16 = 0.0625.", "5/8 = 5 x 0.125 = 0.625.", "3/7 = 3 x 0.143 = 0.429."],
+    when: "Ratios, odds, and quick shares: 3 to 1 pot odds is 1/4 = 25%.",
+    trap: "Sevenths repeat in a cycle: 1/7 = 0.142857. Three decimals is enough for any drill here.",
+  },
+  {
+    id: "round_and_adjust", title: "Round, then adjust", families: ["round_adjust"],
+    method: "Multiply by the nearest round number, then subtract or add the difference.",
+    examples: ["49 x 6 = 300 - 6 = 294.", "19 x 7 = 140 - 7 = 133.", "31 x 8 = 240 + 8 = 248."],
+    when: "One factor ends in 9, 8, 1, or 2.",
+    trap: "The adjustment is the other factor times the gap: 48 x 6 = 300 - 12, not 300 - 2.",
+  },
+  {
+    id: "millions_and_billions", title: "Millions and billions without losing zeros", families: ["back_of_envelope:mktcap", "oil_revenue", "reserve_life", "unit_juggle"],
+    method: "Name the unit of each number, multiply the plain numbers, then multiply the units: M x M is trillions; M x thousands is billions; per-day x 365 is per year.",
+    examples: ["$50 x 500M shares = 25,000M = $25B.", "10,000 barrels a day x $70 x 90 days = 63,000,000 = $63M a quarter.", "$1.2B / 40M shares = $30 a share."],
+    when: "Market caps, revenue from a daily rate, per-share numbers.",
+    trap: "Dividing millions by millions gives a plain number; dividing millions by thousands gives thousands. Say the units out loud.",
+  },
+  {
+    id: "rule_of_72", title: "Rule of 72 and the doubling anchors", families: ["growth_rate:double", "lbo_return"],
+    method: "Years to double is about 72 divided by the yearly rate. For a buyout: 2x in 5 years is about 15% a year, 3x in 5 years about 25%, 2x in 3 years about 26%.",
+    examples: ["9% a year doubles in 8 years.", "Doubled in 4 years: about 18% a year.", "3x in 5 years: 25%. 2.5x in 5 years: about 20%."],
+    when: "Any compounding question asked out loud. Interviewers want the anchor, not the exact power.",
+    trap: "The rule of 72 is for doubling only. For tripling, 114 / rate is the equivalent.",
+  },
+  {
+    id: "multiples_and_yields", title: "Multiples and yields are the same fact", families: ["multiple_to_yield", "pe_ratio", "back_of_envelope:multiple", "accretion"],
+    method: "A multiple is price over earnings; a yield is earnings over price. Flip one to get the other.",
+    examples: ["20x earnings is a 5% earnings yield.", "10x EBITDA is a 10% EBITDA yield.", "A 4% yield is a 25x multiple."],
+    when: "Comparing to interest rates, and for accretion: buying a higher yield with a lower one adds to earnings per share.",
+    trap: "A high multiple means expensive, a high yield means cheap. They move opposite ways.",
+  },
+  {
+    id: "pot_odds_three_ways", title: "Pot odds three ways", families: ["pot_odds", "pot_odds_bet:third", "pot_odds_bet:half", "pot_odds_bet:twothirds", "pot_odds_bet:pot", "pot_odds_bet:over", "bluff_break_even", "pot_odds_decision"],
+    method: "Percent: call / (pot + call). Ratio: pot to call, and 1 / (ratio + 1) is the same percent. When the pot is stated before the bet: bet / (pot + 2 x bet).",
+    examples: ["$10 to call into $30: 10 / 40 = 25%. As a ratio, 3 to 1.", "Half-pot bet: always 25%. Pot-sized bet: always 33%. Two-thirds: 29%.", "Bluffing $50 into $100: it works if they fold 50 / 150 = 33% of the time."],
+    when: "Every call decision. Ask \"before or after the bet?\" before you answer.",
+    trap: "Mixing the two pots. $100 pot, $50 bet: it is 50 / 200 = 25%, not 50 / 150.",
+  },
+  {
+    id: "rule_of_4_and_2", title: "Rule of 4 and 2, with the correction", families: ["outs_equity:1", "outs_equity:2"],
+    method: "Two cards to come: outs x 4. One card: outs x 2. Above 8 outs with two cards to come, subtract (outs - 8) from the rule-of-4 number.",
+    examples: ["9 outs: 36 - 1 = 35% (exact 34.97). One card: 18% (exact 19.6).", "15 outs: 60 - 7 = 53% (exact 54).", "4 outs: 16% and 8% (exact 16.5 and 8.7)."],
+    when: "Any draw. Know 9 outs (flush draw) and 8 outs (open-ended) cold; the rest you derive.",
+    trap: "Rule of 4 assumes you see both cards. If a bet on the turn will price you out, use the rule of 2 for the next card only.",
+  },
+  {
+    id: "count_the_outs", title: "Count the outs", families: ["count_outs"],
+    method: "Add the cards that complete each draw, and subtract any card counted twice.",
+    examples: ["Flush draw: 9 (13 of the suit minus the 4 you see).", "Open-ended straight: 8. Gutshot: 4. Two overcards: 6.", "Flush draw plus open-ended: 9 + 8 - 2 (the two straight cards that are also the suit) = 15."],
+    when: "Before every pot-odds calculation. The outs number is the input to everything else.",
+    trap: "Dirty outs: a card that makes your straight but also makes someone else's flush is not a full out. Discount it.",
+  },
+];
+export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((l) => [l.id, l]));
+export const LESSON_BY_FAMILY = {};
+for (const l of LESSONS) for (const f of l.families) LESSON_BY_FAMILY[f] = l.id;

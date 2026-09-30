@@ -1,5 +1,7 @@
 // Screens: home -> session -> summary. Also interview run, weekly check, starred, stats, explain.
-import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
+import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
+import { LESSONS, LESSON_BY_ID, LESSON_BY_FAMILY } from "./lessons.js";
+import { RUNS } from "./runs.js";
 import { Store } from "./store.js";
 import { SyncClient, mergeProgress } from "./sync.js";
 import { SUPABASE } from "./config.js";
@@ -113,8 +115,8 @@ function home(keepScroll = false) {
       el("div", { class: "title" }, "Sunday check"),
       el("p", { class: "muted small" }, "Ten typed questions from what you have started. This is the honest score."),
       el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
-    el("button", { class: "card action", onclick: startInterview },
-      el("span", { class: "choice" }, el("span", { class: "title" }, "Interview run"), el("span", { class: "muted small" }, "The FIR question as it will happen. Three typed answers, 90 seconds, pass or fail."))),
+    el("button", { class: "card action", onclick: runsMenu },
+      el("span", { class: "choice" }, el("span", { class: "title" }, "Interview runs"), el("span", { class: "muted small" }, "Poker, finance, or accounting. Three typed answers against the clock, pass or fail."))),
     el("h2", {}, "What do you want to drill?"),
     el("div", { class: "stack" }, HOME_ORDER.map(setButton)),
     el("h2", {}, "How do you answer?"),
@@ -131,6 +133,7 @@ function home(keepScroll = false) {
       el("button", { class: "link", onclick: review }, "Starred"),
       el("button", { class: "link", onclick: stats }, "Stats"),
       el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
+      el("button", { class: "link", onclick: lessonsList }, "Lessons"),
       el("button", { class: "link", onclick: about }, "About"),
       el("button", { class: "link", onclick: account }, syncState.user ? "Account ✓" : "Account"))
   );
@@ -176,6 +179,48 @@ function account() {
   input.focus();
 }
 
+function lessonsList() {
+  screen(
+    el("h1", {}, "Lessons"),
+    el("p", { class: "muted" }, "One minute each. Standard methods, nothing invented. Read one, then try three."),
+    el("div", { class: "stack" }, LESSONS.map((l) => el("button", { onclick: () => lesson(l.id, lessonsList) },
+      el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, l.title), store.lessonsRead.includes(l.id) ? el("span", { class: "badge l3" }, "read") : null), el("span", { class: "muted small" }, l.method))))),
+    el("div", { style: "height:16px" }),
+    el("button", { class: "link", onclick: () => home() }, "Back")
+  );
+}
+
+function lesson(id, back) {
+  const l = LESSON_BY_ID[id];
+  store.markLessonRead(id); store.save();
+  const tryThree = () => {
+    const rng = makeRng();
+    const items = [];
+    const seen = new Set();
+    for (let k = 0; k < 60 && items.length < 3; k++) {
+      const f = l.families[k % l.families.length];
+      const drill = f.split(":")[0];
+      if (!DRILLS[drill]) continue;
+      const it = DRILLS[drill](rng, { family: f });
+      if (!seen.has(it.key)) { seen.add(it.key); items.push(it); }
+    }
+    if (!items.length) return;
+    session = null;
+    startSession(state.group, "type", items.length, { items, kind: "lesson" });
+  };
+  screen(
+    el("h1", {}, l.title),
+    el("p", { style: "font-size:19px" }, l.method),
+    el("h2", {}, "Worked examples"),
+    ...l.examples.map((x) => el("p", { class: "num" }, x)),
+    el("h2", {}, "When it works"), el("p", {}, l.when),
+    el("h2", {}, "The trap"), el("p", {}, l.trap),
+    el("button", { class: "primary", onclick: tryThree }, "Try three, typed"),
+    el("p", { class: "muted small", style: "margin-top:16px" }, "This is the tool's explanation. Write your own in your notes without looking; if you can't, you don't own it yet."),
+    el("button", { class: "link", onclick: back ?? (() => home()) }, "Back")
+  );
+}
+
 function about() {
   screen(
     el("h1", {}, "About Napkin"),
@@ -199,7 +244,7 @@ function startSession(group, mode, count, opts = {}) {
   const names = GROUPS[group];
   const items = opts.items ?? buildQueue(store, names, count, makeRng());
   const intros = names.filter((n) => !store.introShown.includes(n));
-  session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", deadline: opts.deadline ?? null };
+  session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", run: opts.run ?? null };
   if (intros.length && session.kind === "drill") return introScreen();
   nextItem();
 }
@@ -217,11 +262,11 @@ function introScreen() {
 function header() {
   const right = session.results.filter((r) => r.correct).length;
   const item = session.items[session.i];
-  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday check" : null;
+  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday check" : session.kind === "lesson" ? "Try three" : null;
   const pct = Math.round((session.i / session.items.length) * 100);
   return [el("div", { class: "topbar" },
     el("span", { class: "muted num" }, `${label ? label + " · " : ""}${session.i + 1} / ${session.items.length} · ${right} right`),
-    store.isStarred(item.key) ? el("span", { class: "star small" }, "starred") : el("button", { class: "link small", onclick: finish }, "End early")),
+    store.isStarred(item) ? el("span", { class: "star small" }, "starred") : el("button", { class: "link small", onclick: finish }, "End early")),
     el("div", { class: "progress", role: "progressbar", "aria-valuenow": String(pct), "aria-valuemin": "0", "aria-valuemax": "100" }, el("span", { style: `width:${pct}%` }))];
 }
 
@@ -274,15 +319,25 @@ function nextItem() {
 
 function grade(item, correct, secs, typed) {
   keys({});
-  const wasStarred = store.isStarred(item.key);
-  const attempt = { key: item.key, drill: item.drill, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000 };
+  const wasStarred = store.isStarred(item);
+  const family = familyOf(item);
+  const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000 };
   store.record(item, attempt);
   store.save();
   session.results.push(attempt);
-  const cleared = wasStarred && !store.isStarred(item.key);
-  const status = cleared ? el("p", { class: "star" }, "Star cleared: two clean reps in a row.")
-    : !correct ? el("p", { class: "star" }, "Starred. It comes back first next session until you get it twice running.") : null;
+  const cleared = wasStarred && !store.isStarred(item);
+  const fam = FAMILIES[family] ?? { name: nice(item.drill), method: null };
+  const lessonId = LESSON_BY_FAMILY[family];
+  const status = cleared ? el("p", { class: "star" }, `Star cleared: ${fam.name}. Two clean reps in a row.`)
+    : !correct ? el("p", { class: "star" }, `Starred: ${fam.name}. Comes back with new numbers until you get two in a row.`) : null;
   const next = () => { session.i += 1; nextItem(); };
+  const tryOne = () => {
+    for (let k = 0; k < 20; k++) {
+      const fresh = DRILLS[item.drill](makeRng(), { family });
+      if (fresh.key !== item.key && !session.items.some((x) => x.key === fresh.key)) { session.items.splice(session.i + 1, 0, fresh); break; }
+    }
+    next();
+  };
   screen(
     header(),
     el("div", { class: "prompt" }, item.prompt),
@@ -290,8 +345,12 @@ function grade(item, correct, secs, typed) {
     typed !== undefined && !correct ? el("p", { class: "muted small" }, `You answered ${typed}.`) : null,
     el("div", { class: "answer num" }, display(item)),
     el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
+    fam.method && !correct ? el("p", { class: "method" }, el("strong", {}, "Method: "), fam.method) : null,
     status,
     el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish"),
+    !correct && session.kind === "drill" ? el("div", { class: "row", style: "margin-top:8px" },
+      el("button", { onclick: tryOne }, "Try one like it now"),
+      lessonId ? el("button", { onclick: () => lesson(lessonId, () => grade(item, correct, secs, typed)) }, store.lessonsRead.includes(lessonId) ? "Read the method again" : "Read the one-minute method") : null) : null,
     el("a", { class: "muted small", style: "margin-top:12px", href: `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Napkin: wrong answer? " + item.key)}&body=${encodeURIComponent(item.prompt + "\n\nShown answer: " + display(item) + "\n\nWhat I think is right:\n")}` }, "Think this answer is wrong? Report it.")
   );
   keys({ Enter: next, " ": next });
@@ -331,10 +390,11 @@ function finish() {
         el("button", { class: "miss", onclick: () => { store.feedback = "n"; store.save(); finish(); } }, "Not really")),
       el("p", { class: "muted small", style: "margin:8px 0 0" }, "One tap. If you want to say more, About has an email.")) : null,
     starred.length ? el("h2", {}, "Starred for next time") : null,
-    ...starred.slice(0, 8).map((it) => el("p", { class: "small" }, it.prompt)),
+    ...starred.slice(0, 8).map((st) => el("p", { class: "small" }, el("strong", {}, (FAMILIES[st.family]?.name ?? nice(st.drill)) + ": "), el("span", { class: "muted" }, st.example))),
     starred.length > 8 ? el("p", { class: "muted small" }, `and ${starred.length - 8} more`) : null,
     el("div", { style: "height:24px" }),
     session.kind === "drill" ? el("button", { class: "primary", onclick: () => startSession(session.group, session.mode, session.items.length) }, "Again") : null,
+    session.kind === "lesson" ? el("button", { class: "primary", onclick: lessonsList }, "Back to lessons") : null,
     el("button", { class: "link", onclick: home }, "Home")
   );
 }
@@ -353,32 +413,34 @@ function startWeekly() {
 }
 
 // ---------- interview run ----------
-function startInterview() {
-  const rng = makeRng();
-  const q1 = DRILLS.pot_odds(rng);
-  const need = q1.answer;
-  const q2 = DRILLS.outs_equity(makeRng(9)); // seed 9 is not special; overwritten below
-  const flush = { ...q2, key: "outs_equity:9:1", drill: "outs_equity", answer: (9 / 46) * 100, abs_tol: 1.2,
-    prompt: "Same hand. You hold a flush draw, 9 outs, and there is one card to come. What is your chance of hitting? Answer in %.",
-    explanation: "9 / 46 = 19.6%. Rule of 2 says 18%. | With one card to come there are 46 unseen cards." };
-  const call = (9 / 46) * 100 >= need;
-  const q3 = { key: `interview_call:${q1.key}`, drill: "interview_call", choices: ["Call", "Fold"], answer: call ? 0 : 1, rel_tol: 0, abs_tol: 0,
-    prompt: `You need to win ${need.toFixed(1)}% of the time and you hit ${((9 / 46) * 100).toFixed(1)}% of the time. Call or fold?`,
-    explanation: `${((9 / 46) * 100).toFixed(1)}% ${call ? "is above" : "is below"} ${need.toFixed(1)}%, so ${call ? "call" : "fold"}. | Judge the decision, not the result. The river card does not change whether the call was right.` };
+function runsMenu() {
+  screen(
+    el("h1", {}, "Interview runs"),
+    el("p", { class: "muted" }, "Three typed answers, against the clock, no partial credit."),
+    el("div", { class: "stack" }, Object.entries(RUNS).map(([id, r]) => el("button", { onclick: () => startInterview(id) },
+      el("span", { class: "choice" }, el("span", { class: "title" }, `${r.title} · ${r.seconds}s`), el("span", { class: "muted small" }, r.sub))))),
+    el("div", { style: "height:16px" }),
+    el("button", { class: "link", onclick: () => home() }, "Back")
+  );
+}
+
+function startInterview(id = "poker") {
+  const run = RUNS[id];
   session = null;
-  startSession("interview", "type", 3, { items: [q1, flush, q3], kind: "interview" });
+  startSession("interview", "type", 3, { items: run.build(makeRng()), kind: "interview", run: id });
 }
 
 function interviewResult(right, total) {
-  const pass = right === 3 && total <= 90;
+  const run = RUNS[session.run ?? "poker"];
+  const pass = right === 3 && total <= run.seconds;
   screen(
     el("h1", {}, pass ? "Pass" : "Not yet"),
     el("div", { class: "card" },
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 3 correct in ${total.toFixed(0)}s`),
-      el("p", { class: "muted" }, pass ? "That is the FIR answer, with the follow-up, under time. Do it again tomorrow." : right < 3 ? "One wrong answer is a fail in the room. Read the index card, then run it again." : "All correct but over 90 seconds. Speed comes from reps. Run it again.")),
+      el("p", { class: "muted" }, pass ? `${run.title} passed under time. Do it again tomorrow.` : right < 3 ? "One wrong answer is a fail in the room. Read the method, then run it again." : `All correct but over ${run.seconds} seconds. Speed comes from reps. Run it again.`)),
     el("div", { style: "height:24px" }),
-    el("button", { class: "primary", onclick: startInterview }, "Run it again"),
-    el("button", { class: "link", onclick: () => explain("pot_odds") }, "Read the pot odds page"),
+    el("button", { class: "primary", onclick: () => startInterview(session.run ?? "poker") }, "Run it again"),
+    el("button", { class: "link", onclick: runsMenu }, "Other runs"),
     el("button", { class: "link", onclick: home }, "Home")
   );
 }
@@ -388,8 +450,8 @@ function review() {
   const items = store.starredItems();
   screen(
     el("h1", {}, "Starred"),
-    el("p", { class: "muted" }, items.length ? "Each clears after two correct answers in a row." : "Nothing starred. Good."),
-    ...items.map((it) => el("div", { class: "card", style: "margin-bottom:8px" }, el("div", {}, it.prompt), el("div", { class: "muted small" }, `${nice(it.drill)} · clean reps so far: ${store.stars[it.key].streak} / 2`))),
+    el("p", { class: "muted" }, items.length ? "A star is a kind of question, not one set of numbers. Each clears after two correct answers in a row." : "Nothing starred. Good."),
+    ...items.map((st) => el("div", { class: "card", style: "margin-bottom:8px" }, el("div", { class: "title" }, FAMILIES[st.family]?.name ?? nice(st.drill)), el("div", { class: "muted small" }, st.example), el("div", { class: "muted small" }, `clean reps so far: ${st.streak} / 2 · comes back with new numbers`))),
     el("div", { style: "height:16px" }),
     el("button", { class: "link", onclick: home }, "Back")
   );

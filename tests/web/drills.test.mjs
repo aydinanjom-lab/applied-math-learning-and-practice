@@ -10,9 +10,9 @@ const comb2 = (n) => (n * (n - 1)) / 2;
 const nums = (it) => it.key.split(":").slice(1).map(Number);
 
 test("registry: groups, definitions, answer-format line on every prompt", () => {
-  assert.deepEqual(GROUPS.poker, ["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos"]);
-  assert.deepEqual(GROUPS.interview, ["pot_odds", "outs_equity", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"]);
-  assert.deepEqual(GROUPS.quick, ["percent_of", "fraction_to_decimal", "multiply_shortcuts", "growth_rate", "back_of_envelope"]);
+  assert.ok(["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos"].every((d) => GROUPS.poker.includes(d)));
+  assert.ok(["pot_odds", "outs_equity", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"].every((d) => GROUPS.interview.includes(d)));
+  assert.ok(["percent_of", "fraction_to_decimal", "multiply_shortcuts", "growth_rate", "back_of_envelope"].every((d) => GROUPS.quick.includes(d)));
   for (const g of ["banking", "moose", "novyx", "betting", "energy"]) assert.ok(GROUPS[g].length >= 5, g);
   for (const name of Object.keys(DRILLS)) {
     assert.ok(DEFINITIONS[name] && !DEFINITIONS[name].includes("\n"), name);

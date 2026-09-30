@@ -9,7 +9,7 @@ const attempt = (correct, key = "pot_odds:30:10") => ({ key, drill: "pot_odds", 
 test("miss stars, two clean reps clear, a miss resets", () => {
   const s = new Store(fakeStorage());
   s.record(item(), attempt(false));
-  assert.deepEqual(s.starredItems().map((i) => i.key), ["pot_odds:30:10"]);
+  assert.deepEqual(s.starredItems().map((i) => i.family), ["pot_odds"]);
   s.record(item(), attempt(true));
   assert.equal(s.starredItems().length, 1);
   s.record(item(), attempt(false));
@@ -33,7 +33,7 @@ test("saves and reloads, survives corrupt data", () => {
   s.markIntroShown("pot_odds");
   s.save();
   const s2 = new Store(st);
-  assert.deepEqual(s2.starredItems().map((i) => i.key), ["pot_odds:30:10"]);
+  assert.deepEqual(s2.starredItems().map((i) => i.family), ["pot_odds"]);
   assert.equal(s2.attempts[0].correct, false);
   assert.deepEqual(s2.introShown, ["pot_odds"]);
   st.setItem("applied_math_progress", "{not json");

@@ -1,4 +1,5 @@
-// Progress in the browser. Mirrors applied_math/store.py. Same JSON shape, same star rule.
+// Progress in the browser. Stars are per family (a kind of question), not per exact numbers.
+import { familyOf, familyFromKey } from "./core.js";
 export const STORAGE_KEY = "applied_math_progress";
 export const CLEAR_AFTER = 2;
 
@@ -15,12 +16,13 @@ export class Store {
     this.goal = null;
     this.sessions = 0;
     this.feedback = null;
+    this.lessonsRead = [];
     try {
       const raw = storage.getItem(STORAGE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
         this.attempts = data.attempts ?? [];
-        this.stars = data.stars ?? {};
+        this.stars = migrateStars(data.stars ?? {});
         this.introShown = data.intro_shown ?? [];
         this.days = data.days ?? [];
         this.weekly = data.weekly ?? [];
@@ -29,6 +31,7 @@ export class Store {
         this.goal = data.goal ?? null;
         this.sessions = data.sessions ?? 0;
         this.feedback = data.feedback ?? null;
+        this.lessonsRead = data.lessons_read ?? [];
       }
     } catch {
       // corrupt or blocked storage: start fresh, never crash a session
@@ -36,16 +39,17 @@ export class Store {
   }
 
   record(item, attempt) {
-    this.attempts.push(attempt);
+    const family = attempt.family ?? familyOf(item);
+    this.attempts.push({ ...attempt, family });
     if (!attempt.correct) {
-      this.stars[item.key] = { item, streak: 0 };
-    } else if (this.stars[item.key]) {
-      this.stars[item.key].streak += 1;
-      if (this.stars[item.key].streak >= CLEAR_AFTER) delete this.stars[item.key];
+      this.stars[family] = { family, drill: item.drill, example: item.prompt, streak: 0 };
+    } else if (this.stars[family]) {
+      this.stars[family].streak += 1;
+      if (this.stars[family].streak >= CLEAR_AFTER) delete this.stars[family];
     }
   }
 
-  starredItems() { return Object.values(this.stars).map((s) => s.item); }
+  starredItems() { return Object.values(this.stars); }
   starredKeys() { return Object.keys(this.stars); }
   markDay(key) { if (!this.days.includes(key)) this.days.push(key); }
   addWeekly(entry) { this.weekly.push(entry); }
@@ -54,17 +58,18 @@ export class Store {
     this.bests[group] = seconds;
     return true;
   }
+  markLessonRead(id) { if (!this.lessonsRead.includes(id)) this.lessonsRead.push(id); }
   unlock(group) { if (!this.unlocked.includes(group)) this.unlocked.push(group); }
-  isStarred(key) { return Boolean(this.stars[key]); }
+  isStarred(item) { return Boolean(this.stars[familyOf(item)]); }
   markIntroShown(drill) { if (!this.introShown.includes(drill)) this.introShown.push(drill); }
 
   snapshot() {
-    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback };
+    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback, lessons_read: this.lessonsRead };
   }
   load(data) {
-    this.attempts = data.attempts ?? []; this.stars = data.stars ?? {}; this.introShown = data.intro_shown ?? [];
+    this.attempts = data.attempts ?? []; this.stars = migrateStars(data.stars ?? {}); this.introShown = data.intro_shown ?? [];
     this.days = data.days ?? []; this.weekly = data.weekly ?? []; this.bests = data.bests ?? {}; this.unlocked = data.unlocked ?? [];
-    this.goal = data.goal ?? null; this.sessions = data.sessions ?? 0; this.feedback = data.feedback ?? null;
+    this.goal = data.goal ?? null; this.sessions = data.sessions ?? 0; this.feedback = data.feedback ?? null; this.lessonsRead = data.lessons_read ?? [];
   }
 
   save() {
@@ -86,4 +91,17 @@ export class Store {
       return { drill, attempts: rows.length, accuracy: Math.round(acc), avgSeconds: Math.round(avg * 10) / 10 };
     });
   }
+}
+
+// Old stars were keyed by exact item; new ones by family. Convert on read.
+export function migrateStars(stars) {
+  const out = {};
+  for (const [key, entry] of Object.entries(stars)) {
+    if (entry.item) {
+      const family = familyFromKey(entry.item.key);
+      const prev = out[family];
+      out[family] = { family, drill: entry.item.drill, example: entry.item.prompt, streak: prev ? Math.min(prev.streak, entry.streak) : entry.streak };
+    } else out[key] = entry;
+  }
+  return out;
 }

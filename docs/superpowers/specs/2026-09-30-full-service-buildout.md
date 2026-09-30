@@ -48,7 +48,11 @@ Fixes the laptop-versus-phone problem and creates the data that proves retention
 
 Exit: practice on the laptop, open the phone, see the same streak.
 
-### Phase 3: Knowing what happens (2 evenings)
+### Phase 3 (as renumbered): category stars, better miss, lessons, bank expansion — BUILT 2026-09-30
+
+See `2026-09-30-phase3-stars-lessons-bank.md`. The admin view below becomes Phase 4.
+
+### Phase 4: Knowing what happens (2 evenings)
 
 - A private admin view (Aydin only, gated by user id): sign-ups, sessions per day, users who returned 2+, 5+, and 10+ days, the say-versus-typed gap across users, most-missed drills.
 - Computed from the `progress` table by a nightly SQL job or on demand. No third-party tracker.

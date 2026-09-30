@@ -96,3 +96,4 @@ button.card.action { width: 100%; margin-bottom: var(--space-1); }
 
 /* Programmatic focus lands on headings for screen readers; no visible ring there. Buttons and inputs keep theirs. */
 h1:focus, .prompt:focus { outline: none; }
+.method { background: var(--surface-2); border-radius: 12px; padding: 10px 14px; margin: 0 0 var(--space-2); }

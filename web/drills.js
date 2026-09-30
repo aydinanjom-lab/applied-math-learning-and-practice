@@ -1,10 +1,12 @@
 // Drill generators. An item: { key, drill, prompt, answer, explanation, rel_tol, abs_tol, choices? }.
 // Prompt rules: situation first, question last, answer format stated. Jargon lives in the explanation.
 
-import { makeRng, fmt, r2, parseAnswer, isCorrect, item, comb2, NUM, PCT, USD, USDM, POTS, potAndCall, exactEquity, DRAW_NAMES } from "./core.js";
+import { makeRng, fmt, r2, parseAnswer, isCorrect, item, comb2, NUM, PCT, USD, USDM, POTS, potAndCall, exactEquity, DRAW_NAMES, familyOf, familyFromKey } from "./core.js";
+import { FAMILIES } from "./families.js";
 import * as interview from "./interview.js";
 import * as finance from "./finance.js";
-export { makeRng, fmt, parseAnswer, isCorrect };
+import * as quick2 from "./quick2.js";
+export { makeRng, fmt, parseAnswer, isCorrect, familyOf, familyFromKey, FAMILIES };
 
 // ======================= poker =======================
 
@@ -22,16 +24,16 @@ function pot_odds(rng) {
 }
 
 
-function outs_equity(rng) {
+function outs_equity(rng, opts = {}) {
   const outs = rng.randint(2, 15);
-  const cards = rng.choice([1, 2]);
+  const cards = opts.family ? Number(opts.family.split(":")[1]) : rng.choice([1, 2]);
   const exact = exactEquity(outs, cards);
   const rule = outs * (cards === 2 ? 4 : 2);
   const name = DRAW_NAMES[outs];
   const lead = name ? `You hold ${name}, ${outs} outs.` : `You have ${outs} outs.`;
   const tail = cards === 1 ? "One card to come. What is your chance of hitting?" : "Two cards to come. What is your chance of hitting by the river?";
   return item({
-    key: `outs_equity:${outs}:${cards}`, drill: "outs_equity",
+    key: `outs_equity:${outs}:${cards}`, drill: "outs_equity", family: `outs_equity:${cards}`,
     prompt: `${lead} ${tail} ${PCT}`,
     answer: exact,
     explanation: `Rule of 4 and 2: ${outs} x ${cards === 2 ? 4 : 2} = ${rule}%. | Exact: ${exact.toFixed(1)}% (${outs} outs among ${cards === 2 ? 47 : 46} unseen cards${cards === 2 ? ", two draws" : ""}). Poker calls this your equity.`,
@@ -74,8 +76,8 @@ function implied_odds(rng) {
 }
 
 const RANKS = ["A", "K", "Q", "J", "T", "9", "8"];
-function combos(rng) {
-  const kind = rng.choice(["pair", "suited", "offsuit", "any", "pair_blocked", "any_blocked"]);
+function combos(rng, opts = {}) {
+  const kind = opts.family ? opts.family.split(":")[1] : rng.choice(["pair", "suited", "offsuit", "any", "pair_blocked", "any_blocked"]);
   let [r1, r2_] = rng.sample2(RANKS);
   if (RANKS.indexOf(r1) > RANKS.indexOf(r2_)) [r1, r2_] = [r2_, r1];
   const pairName = { A: "aces", K: "kings", Q: "queens", J: "jacks", T: "tens", 9: "nines", 8: "eights" }[r1];
@@ -89,7 +91,7 @@ function combos(rng) {
   };
   const [prompt, answer, how] = table[kind];
   return item({
-    key: `combos:${kind}:${r1}:${r2_}`, drill: "combos", prompt, answer,
+    key: `combos:${kind}:${r1}:${r2_}`, drill: "combos", family: `combos:${kind}`, prompt, answer,
     explanation: `${how}. | Each way is a "combo": one exact pair of cards. Cards you hold are "blockers": they remove combos.`,
     abs_tol: 0.1,
   });
@@ -121,8 +123,8 @@ function fraction_to_decimal(rng) {
   });
 }
 
-function multiply_shortcuts(rng) {
-  const kind = rng.choice(["x11", "sq5", "x25"]);
+function multiply_shortcuts(rng, opts = {}) {
+  const kind = opts.family ? opts.family.split(":")[1] : rng.choice(["x11", "sq5", "x25"]);
   let a, b, how;
   if (kind === "x11") {
     a = rng.randint(12, 98); b = 11;
@@ -137,7 +139,7 @@ function multiply_shortcuts(rng) {
     how = `${a} / 4 = ${fmt(a / 4)}, then x 100`;
   }
   return item({
-    key: `multiply_shortcuts:${kind}:${a}:${b}`, drill: "multiply_shortcuts",
+    key: `multiply_shortcuts:${kind}:${a}:${b}`, drill: "multiply_shortcuts", family: `multiply_shortcuts:${kind}`,
     prompt: `What is ${a} x ${b}? ${NUM}`, answer: a * b,
     explanation: `${how}. | Exact: ${a} x ${b} = ${fmt(a * b)}.`,
   });
@@ -146,12 +148,13 @@ function multiply_shortcuts(rng) {
 const GROWTH_RATES = [5, 10, 12, 15, 20, 25, 30, 50, 100];
 const GROWTH_BASES = [40, 50, 80, 100, 120, 150, 200, 240, 300, 400, 500, 800, 1000, 1200, 2000];
 const DOUBLING_RATES = [3, 4, 6, 8, 9, 12, 18, 24];
-function growth_rate(rng) {
-  if (rng.random() < 0.6) {
+function growth_rate(rng, opts = {}) {
+  const pct = opts.family ? opts.family.endsWith(":pct") : rng.random() < 0.6;
+  if (pct) {
     const r = rng.choice(GROWTH_RATES), a = rng.choice(GROWTH_BASES);
     const b = (a * (100 + r)) / 100;
     return item({
-      key: `growth_rate:pct:${a}:${b}`, drill: "growth_rate",
+      key: `growth_rate:pct:${a}:${b}`, drill: "growth_rate", family: "growth_rate:pct",
       prompt: `Something grows from ${fmt(a)} to ${fmt(b)}. What is the growth rate? ${PCT}`, answer: r,
       explanation: `Change = ${fmt(b)} - ${fmt(a)} = ${fmt(b - a)}. Divided by the start, ${fmt(a)}, = ${r}%.`,
       abs_tol: 0.5,
@@ -160,20 +163,20 @@ function growth_rate(rng) {
   const r = rng.choice(DOUBLING_RATES);
   const exact = Math.log(2) / Math.log(1 + r / 100);
   return item({
-    key: `growth_rate:double:${r}`, drill: "growth_rate",
+    key: `growth_rate:double:${r}`, drill: "growth_rate", family: "growth_rate:double",
     prompt: `At ${r}% a year, how many years until it doubles? Answer in years.`, answer: 72 / r,
     explanation: `Rule of 72: 72 / ${r} = ${fmt(72 / r)} years. | Exact: ln 2 / ln(1.${String(r).padStart(2, "0")}) = ${exact.toFixed(1)} years.`,
     abs_tol: 1.0,
   });
 }
 
-function back_of_envelope(rng) {
-  const kind = rng.choice(["multiple", "ebitda", "mktcap", "interest"]);
+function back_of_envelope(rng, opts = {}) {
+  const kind = opts.family ? opts.family.split(":")[1] : rng.choice(["multiple", "ebitda", "mktcap", "interest"]);
   if (kind === "multiple") {
     const e = rng.choice([25, 40, 50, 60, 80, 100, 120, 150, 200, 250, 400]);
     const mult = rng.choice([6, 7, 8, 9, 10, 11, 12, 14, 15]);
     const ev = e * mult;
-    return item({ key: `back_of_envelope:multiple:${ev}:${e}`, drill: "back_of_envelope",
+    return item({ key: `back_of_envelope:multiple:${ev}:${e}`, drill: "back_of_envelope", family: "back_of_envelope:multiple",
       prompt: `A company is worth $${fmt(ev)}M in total (its enterprise value) and earns $${fmt(e)}M of EBITDA. What is its EV/EBITDA multiple? ${NUM}`, answer: mult,
       explanation: `EV / EBITDA = ${fmt(ev)} / ${fmt(e)} = ${mult}x. | Enterprise value (EV) is what the whole business costs, debt included. EBITDA is profit before interest, tax, depreciation and amortisation.`, rel_tol: 0.05 });
   }
@@ -181,21 +184,21 @@ function back_of_envelope(rng) {
     const rev = rng.choice([80, 120, 200, 250, 400, 500, 750, 1000, 1500, 2000]);
     const margin = rng.choice([8, 10, 12, 15, 18, 20, 25, 30, 35, 40]);
     const ans = (rev * margin) / 100;
-    return item({ key: `back_of_envelope:ebitda:${rev}:${margin}`, drill: "back_of_envelope",
+    return item({ key: `back_of_envelope:ebitda:${rev}:${margin}`, drill: "back_of_envelope", family: "back_of_envelope:ebitda",
       prompt: `A company has $${fmt(rev)}M of revenue and a ${margin}% EBITDA margin. What is its EBITDA? ${USDM}`, answer: ans,
       explanation: `${margin}% of ${fmt(rev)} = ${fmt(ans)}. | A margin is profit as a share of revenue.`, rel_tol: 0.05 });
   }
   if (kind === "mktcap") {
     const price = rng.choice([8, 12, 15, 20, 25, 30, 40, 45, 50, 60, 75, 80, 120]);
     const shares = rng.choice([20, 40, 50, 80, 100, 150, 200, 250, 400, 500]);
-    return item({ key: `back_of_envelope:mktcap:${price}:${shares}`, drill: "back_of_envelope",
+    return item({ key: `back_of_envelope:mktcap:${price}:${shares}`, drill: "back_of_envelope", family: "back_of_envelope:mktcap",
       prompt: `A stock trades at $${price} and there are ${fmt(shares)}M shares. What is the market cap? ${USDM}`, answer: price * shares,
       explanation: `${price} x ${fmt(shares)} = ${fmt(price * shares)}. | Market cap is the price of all the shares together.`, rel_tol: 0.05 });
   }
   const debt = rng.choice([50, 100, 150, 200, 300, 400, 500, 800, 1000, 1500]);
   const rate = rng.choice([4, 5, 6, 7, 8, 9, 10, 12]);
   const ans = (debt * rate) / 100;
-  return item({ key: `back_of_envelope:interest:${debt}:${rate}`, drill: "back_of_envelope",
+  return item({ key: `back_of_envelope:interest:${debt}:${rate}`, drill: "back_of_envelope", family: "back_of_envelope:interest",
     prompt: `A company has $${fmt(debt)}M of debt at ${rate}% interest. What does it pay in interest each year? ${USDM}`, answer: ans,
     explanation: `${rate}% of ${fmt(debt)} = ${fmt(ans)}. | Interest expense is the yearly cost of carrying the debt.`, rel_tol: 0.05 });
 }
@@ -257,14 +260,14 @@ function interest_coverage(rng) {
 }
 
 // ======================= Mighty Moose (stand-in numbers) =======================
-function contribution_margin(rng) {
+function contribution_margin(rng, opts = {}) {
   const p = rng.choice([35, 40, 45, 50, 60, 75, 90]);
   const c = rng.choice([8, 10, 12, 14, 16, 20]);
   const s = rng.choice([4, 5, 6, 7, 8]);
   const f = rng.choice([3, 4, 5]);
   const ans = p - c - s - (p * f) / 100;
-  const pctAsk = rng.random() < 0.4;
-  return item({ key: `contribution_margin:${p}:${c}:${s}:${f}${pctAsk ? ":pct" : ""}`, drill: "contribution_margin",
+  const pctAsk = opts.family ? opts.family.endsWith(":pct") : rng.random() < 0.4;
+  return item({ key: `contribution_margin:${p}:${c}:${s}:${f}${pctAsk ? ":pct" : ""}`, drill: "contribution_margin", family: pctAsk ? "contribution_margin:pct" : "contribution_margin",
     prompt: `A bag sells for $${p}. It costs $${c} to make and $${s} to ship, and the payment processor takes ${f}%. What is the contribution margin per bag${pctAsk ? ", as a percent of price" : ""}? ${pctAsk ? PCT : USD}`,
     answer: pctAsk ? (ans / p) * 100 : ans,
     explanation: `${p} - ${c} - ${s} - ${f}% of ${p} (${fmt(r2((p * f) / 100))}) = $${fmt(r2(ans))}${pctAsk ? `, which is ${((ans / p) * 100).toFixed(0)}% of the price` : ""}. | Contribution margin is what each sale leaves to cover fixed costs and ads.`,
@@ -478,14 +481,14 @@ export const DRILLS = {
   rebooking_revenue, unrealized_revenue, rate_card, pipeline_revenue, lifetime_value,
   american_to_prob, decimal_to_prob, fraction_to_decimal_odds, remove_vig, bet_ev, kelly,
   oil_revenue, netback, decline, reserve_life, breakeven_price,
-  ...interview, ...finance,
+  ...interview, ...finance, ...quick2,
 };
 
 export const GROUPS = {
-  poker: ["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos"],
-  interview: ["pot_odds", "outs_equity", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"],
-  quick: ["percent_of", "fraction_to_decimal", "multiply_shortcuts", "growth_rate", "back_of_envelope"],
-  banking: ["equity_value", "ev_from_equity", "multiple_to_yield", "pe_ratio", "dividend_yield", "after_tax_debt", "wacc", "capm", "discount_one_year", "perpetuity", "lbo_return", "lbo_moic", "accretion", "interest_coverage", "bank_spread"],
+  poker: ["pot_odds", "outs_equity", "count_outs", "pot_odds_ratio", "ev_call", "implied_odds", "combos", "price_out_draw"],
+  interview: ["pot_odds", "outs_equity", "count_outs", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"],
+  quick: ["percent_of", "reverse_percent", "percent_chain", "fraction_to_decimal", "multiply_shortcuts", "near_100", "halve_double", "split_multiply", "round_adjust", "divide_shortcuts", "unit_juggle", "growth_rate", "back_of_envelope"],
+  banking: ["equity_value", "ev_from_equity", "multiple_to_yield", "pe_ratio", "dividend_yield", "after_tax_debt", "wacc", "capm", "discount_one_year", "perpetuity", "lbo_return", "lbo_moic", "accretion", "accretion_mix", "synergies_breakeven", "dcf_two_year", "debt_paydown", "cap_table", "interest_coverage", "bank_spread"],
   accounting: ["balance_sheet", "eps", "net_income_from_ebit", "working_capital", "dep_net_income", "dep_cash", "statement_direction"],
   betting: ["american_to_prob", "decimal_to_prob", "fraction_to_decimal_odds", "remove_vig", "bet_ev", "kelly"],
   moose: ["contribution_margin", "payback_months", "break_even_units", "discount_trap", "roas_to_return", "customer_value"],
@@ -497,8 +500,8 @@ GROUPS.all = Object.values(GROUPS).flat().filter((v, i, a) => a.indexOf(v) === i
 // Home-screen order, label, and one-line subtitle.
 export const GROUP_LABELS = {
   interview: ["Interview set", "Pot odds, outs, bet sizing, bluffs, call or fold. The FIR question and its follow-ups."],
-  poker: ["Poker math", "Pot odds, outs, EV, implied odds, combos"],
-  quick: ["Quick math", "Percentages, fractions, multiplication, growth, banking numbers"],
+  poker: ["Poker math", "Pot odds, outs, EV, implied odds, combos, pricing out a draw"],
+  quick: ["Quick math", "Percent tricks, fast multiplying and dividing, fractions, growth, units"],
   banking: ["Banking interview numbers", "EV, P/E, cost of capital, discounting, buyout returns, bank spread"],
   accounting: ["Accounting interview numbers", "Balance sheet, EPS, net income, working capital, the depreciation question"],
   betting: ["Sports betting math", "Odds formats, fair chance, the vig, EV, Kelly. Math only."],
@@ -516,6 +519,22 @@ export const DEFINITIONS = {
   pot_odds_bet: "When the pot is stated before the bet, the number is bet / (pot + 2 x bet). Half-pot needs 25%, full pot 33%.",
   bluff_break_even: "A bluff breaks even when they fold bet / (pot + bet) of the time. Pot odds from the bettor's side.",
   pot_odds_decision: "Call when your chance of hitting is above the pot-odds number. Judge the decision, not the result.",
+  count_outs: "Outs: the unseen cards that make your hand. Add the draws, subtract any card counted twice.",
+  pot_odds_ratio: "Pot odds as a ratio: pot to call. 3 to 1 means you need to win one time in four.",
+  price_out_draw: "A bet prices out a draw when the pot odds it offers are worse than the draw's chance of hitting.",
+  near_100: "Numbers near 100: use the gaps from 100 for the front and back halves.",
+  halve_double: "Halve the even one, double the other, until the product is easy.",
+  split_multiply: "Split one factor into tens and ones, multiply each, add.",
+  round_adjust: "Multiply by the nearest round number, then fix the difference.",
+  divide_shortcuts: "Divide by 4, 5, 8, 25, 50 with halving and doubling instead of long division.",
+  reverse_percent: "If a part is p% of a whole, the whole is part / p.",
+  percent_chain: "Percent changes multiply. Up 20 then down 20 is down 4.",
+  unit_juggle: "Millions, billions, per-share, per-day: name the units, then multiply or cancel them.",
+  accretion_mix: "Mixed deals: compare the target's earnings yield with the blended cost of the buyer's stock and after-tax debt.",
+  synergies_breakeven: "Synergies needed = premium paid / the multiple peers trade at.",
+  dcf_two_year: "Discount each year's cash by (1 + rate) to that year's power, add the terminal value in the last year.",
+  debt_paydown: "Debt at exit = starting debt minus yearly paydown times years.",
+  cap_table: "After a raise you keep pre-money / (pre-money + new money) of what you had.",
   ev_from_equity: "Enterprise value = market cap + debt - cash. The price of the whole business.",
   pe_ratio: "P/E = price / earnings per share. Years of earnings you pay for. Flip it for the earnings yield.",
   dividend_yield: "Dividend yield = yearly dividend / price.",
@@ -619,8 +638,15 @@ export function resolve(name) {
 
 export function buildQueue(store, drillNames, n, rng) {
   const wanted = new Set(drillNames);
-  const queue = store.starredItems().filter((it) => wanted.has(it.drill)).slice(0, n);
-  const seen = new Set(queue.map((it) => it.key));
+  const queue = [];
+  const seen = new Set();
+  for (const star of store.starredItems()) {
+    if (queue.length >= n || !wanted.has(star.drill) || !DRILLS[star.drill]) continue;
+    for (let t = 0; t < 20; t++) {
+      const it = DRILLS[star.drill](rng, { family: star.family });
+      if (familyOf(it) === star.family && !seen.has(it.key)) { seen.add(it.key); queue.push(it); break; }
+    }
+  }
   let i = 0, tries = 0;
   while (queue.length < n && tries < n * 50) {
     const it = DRILLS[drillNames[i % drillNames.length]](rng);

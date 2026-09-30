@@ -12,7 +12,7 @@ export function masteryLevel(attempts, drill, starredKeys) {
   if (rows.length < 10) return 0;
   const acc = rows.filter((r) => r.correct).length / rows.length;
   const med = median(rows.map((r) => r.seconds));
-  const starred = starredKeys.some((k) => k.startsWith(drill + ":"));
+  const starred = starredKeys.some((k) => k === drill || k.startsWith(drill + ":"));
   if (acc >= 0.95 && med < 8 && !starred) return 4;
   if (acc >= 0.9 && med < 12) return 3;
   if (acc >= 0.8) return 2;

@@ -79,6 +79,13 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `run` (browser driving) | Two-device simulation against a fake backend: magic link, first device pushes, wiped second device pulls streak and stars, sign-out keeps the local copy. |
 | `brainstorming` | Phase 3 plan: three approaches to category stars, the better-miss screen, 18 lessons, open questions. |
 
+## Used for Phase 3 (2026-09-30)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | Family engine (tags, forced families, family stars, migration, queue, sync replay), 19 new generators, lesson-to-drill coverage, run variants. 48 tests. |
+| `run` (browser driving) | Miss screen (method, try-one, lesson link and back), lessons list and Try three, starred-by-family list, accounting run. |
+
 ## Still to use
 
 | Skill | When |

@@ -7,7 +7,7 @@ const nums = (it) => it.key.split(":").slice(1).map(Number);
 const comb2 = (n) => (n * (n - 1)) / 2;
 
 test("groups: interview grows, accounting exists, all drills have definitions and an answer line", () => {
-  assert.deepEqual(GROUPS.interview, ["pot_odds", "outs_equity", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"]);
+  assert.ok(["pot_odds", "outs_equity", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"].every((d) => GROUPS.interview.includes(d)));
   assert.ok(GROUPS.banking.length >= 14);
   assert.ok(GROUPS.accounting.length >= 6);
   for (const name of [...GROUPS.interview, ...GROUPS.banking, ...GROUPS.accounting]) {
@@ -20,11 +20,11 @@ test("groups: interview grows, accounting exists, all drills have definitions an
 
 test("pot odds with the bet stated separately: bet / (pot + 2 x bet)", () => {
   for (const it of items("pot_odds_bet")) {
-    const [pot, bet] = nums(it);
+    const [pot, bet] = it.key.split(":").slice(2).map(Number);
     assert.ok(isCorrect(it, (bet / (pot + 2 * bet)) * 100), it.prompt);
     assert.match(it.prompt, /before your opponent bets/);
   }
-  const half = items("pot_odds_bet", 2000).find((it) => nums(it)[0] === 100 && nums(it)[1] === 50);
+  const half = items("pot_odds_bet", 2000).find((it) => it.key.endsWith(":100:50"));
   assert.ok(half && Math.abs(half.answer - 25) < 0.01, "half-pot bet needs 25%");
 });
 

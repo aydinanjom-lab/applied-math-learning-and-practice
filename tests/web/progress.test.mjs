@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { masteryLevel, LEVELS, groupLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest } from "../../web/progress.js";
+import { GROUPS } from "../../web/drills.js";
 
 const typed = (n, correct, secs = 5, drill = "pot_odds") => Array.from({ length: n }, (_, i) => ({ drill, correct: i < correct, seconds: secs, mode: "type" }));
 const said = (n, drill = "pot_odds") => Array.from({ length: n }, () => ({ drill, correct: true, seconds: 1, mode: "say" }));
@@ -57,7 +58,7 @@ test("unlocks: betting needs poker Solid; everything else is open; override wins
   const weak = typed(5, 5);
   assert.equal(isUnlocked("betting", weak, [], []), false);
   assert.equal(isUnlocked("banking", weak, [], []), true);
-  const solidPoker = ["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos"].flatMap((d) => typed(10, 9, 10, d));
+  const solidPoker = GROUPS.poker.flatMap((d) => typed(10, 9, 10, d));
   assert.equal(isUnlocked("betting", solidPoker, [], []), true);
   assert.equal(isUnlocked("betting", weak, [], ["betting"]), true);
 });

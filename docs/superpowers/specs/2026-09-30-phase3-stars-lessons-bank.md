@@ -1,6 +1,6 @@
 # Plan: Phase 3. Category stars, a better miss, mini lessons, and a bigger bank
 
-Date: 2026-09-30. A plan, not a build. Phase 2 (accounts and sync) is built; this is next. Approve, cut, or reorder.
+Date: 2026-09-30. Approved the same day (try-one as a button, bet-size families split, lessons written by the tool) and BUILT: sections 2 to 5 as written, 19 new drills, 18 lessons, three interview runs.
 
 ## 1. What is being asked, in one line each
 

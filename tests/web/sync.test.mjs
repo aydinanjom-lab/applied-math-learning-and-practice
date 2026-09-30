@@ -6,10 +6,10 @@ const it = (key, drill = "pot_odds") => ({ key, drill, prompt: "?", answer: 1, e
 const att = (key, correct, ts, mode = "type") => ({ key, drill: "pot_odds", correct, seconds: 3, mode, ts });
 
 test("stars are rebuilt from the attempt log with the two-clean-reps rule", () => {
-  const items = { "a": it("a"), "b": it("b") };
-  const stars = rebuildStars([att("a", false, 1), att("a", true, 2), att("b", false, 3), att("a", true, 4)], items);
+  const stars = rebuildStars([att("a", false, 1), att("a", true, 2), att("b", false, 3), att("a", true, 4)], { b: { example: "B?" } });
   assert.deepEqual(Object.keys(stars), ["b"]);
   assert.equal(stars.b.streak, 0);
+  assert.equal(stars.b.example, "B?");
 });
 
 test("merge takes the union of attempts, dedupes by key and time, and sorts by time", () => {
@@ -33,7 +33,8 @@ test("merge recomputes stars from the merged log, keeping item text from either 
   const m = mergeProgress(local, remote);
   assert.deepEqual(m.stars, {}, "two later clean reps on the other device clear the star");
   const m2 = mergeProgress({ attempts: [att("z", false, 9)], stars: { z: { item: it("z"), streak: 0 } } }, { attempts: [], stars: {} });
-  assert.equal(m2.stars.z.item.key, "z");
+  assert.equal(m2.stars.z.family, "z");
+  assert.equal(m2.stars.z.example, "?", "example text carried over from an old-format star");
 });
 
 test("bests keep the fastest, weekly dedupes by week", () => {

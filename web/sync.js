@@ -1,30 +1,32 @@
 // Sync: merge two copies of progress, and talk to Supabase when it is configured.
 // The browser copy is always the source of truth during a session; sync is a background merge.
-import { CLEAR_AFTER } from "./store.js";
+import { CLEAR_AFTER, migrateStars } from "./store.js";
+import { familyFromKey } from "./core.js";
 
 const uniqBy = (arr, keyOf) => { const seen = new Set(); return arr.filter((x) => { const k = keyOf(x); if (seen.has(k)) return false; seen.add(k); return true; }); };
 
-// Replay the attempt log through the star rule. `items` maps key -> item text, from either side's stars.
-export function rebuildStars(attempts, items) {
+// Replay the attempt log through the star rule. `examples` maps family -> { drill, example } from either side's stars.
+export function rebuildStars(attempts, examples) {
   const stars = {};
   for (const a of [...attempts].sort((x, y) => x.ts - y.ts)) {
-    if (!a.correct) { if (items[a.key]) stars[a.key] = { item: items[a.key], streak: 0 }; }
-    else if (stars[a.key]) { stars[a.key].streak += 1; if (stars[a.key].streak >= CLEAR_AFTER) delete stars[a.key]; }
+    const family = a.family ?? familyFromKey(a.key);
+    if (!a.correct) stars[family] = { family, drill: a.drill, example: examples[family]?.example ?? "", streak: 0 };
+    else if (stars[family]) { stars[family].streak += 1; if (stars[family].streak >= CLEAR_AFTER) delete stars[family]; }
   }
   return stars;
 }
 
 export function mergeProgress(local, remote) {
-  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, ...local };
-  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, ...remote };
+  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], ...local };
+  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], ...remote };
   const attempts = uniqBy([...L.attempts, ...R.attempts], (a) => `${a.key}|${a.ts}`).sort((a, b) => a.ts - b.ts);
-  const items = {};
-  for (const s of [...Object.values(R.stars), ...Object.values(L.stars)]) if (s?.item?.key) items[s.item.key] = s.item;
+  const examples = {};
+  for (const s of Object.values({ ...migrateStars(R.stars), ...migrateStars(L.stars) })) examples[s.family] = s;
   const bests = { ...R.bests };
   for (const [g, s] of Object.entries(L.bests)) if (bests[g] === undefined || s < bests[g]) bests[g] = s;
   return {
     attempts,
-    stars: rebuildStars(attempts, items),
+    stars: rebuildStars(attempts, examples),
     days: [...new Set([...L.days, ...R.days])].sort(),
     weekly: uniqBy([...L.weekly, ...R.weekly], (w) => w.week).sort((a, b) => a.week.localeCompare(b.week)),
     bests,
@@ -33,6 +35,7 @@ export function mergeProgress(local, remote) {
     goal: L.goal ?? R.goal,
     sessions: Math.max(L.sessions, R.sessions),
     feedback: L.feedback ?? R.feedback,
+    lessons_read: [...new Set([...L.lessons_read, ...R.lessons_read])],
   };
 }
 

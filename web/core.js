@@ -57,3 +57,19 @@ export function potAndCall(rng) {
 }
 export const exactEquity = (outs, cards) => (cards === 1 ? (outs / 46) * 100 : (1 - comb2(47 - outs) / comb2(47)) * 100);
 export const DRAW_NAMES = { 2: "a pocket pair hoping for a set", 4: "a gutshot straight draw", 6: "two overcards", 8: "an open-ended straight draw", 9: "a flush draw", 12: "a flush draw plus a gutshot", 15: "a flush draw plus an open-ended straight draw" };
+
+export const familyOf = (it) => it.family ?? it.drill;
+
+// Drills whose family is finer than the drill. Maps drill -> function(key segments) -> family suffix.
+const KINDED = {
+  multiply_shortcuts: (p) => p[1], back_of_envelope: (p) => p[1], growth_rate: (p) => p[1], combos: (p) => p[1],
+  statement_direction: (p) => p[1], outs_equity: (p) => p[2], pot_odds_bet: (p) => p[1],
+  contribution_margin: (p) => (p[p.length - 1] === "pct" ? "pct" : null),
+};
+export function familyFromKey(key) {
+  const p = key.split(":");
+  const f = KINDED[p[0]];
+  if (!f) return p[0];
+  const suffix = f(p);
+  return suffix ? `${p[0]}:${suffix}` : p[0];
+}
