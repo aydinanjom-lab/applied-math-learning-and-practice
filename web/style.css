@@ -93,3 +93,6 @@ th { color: var(--muted); font-weight: 500; font-size: 14px; }
 .card.notice .title { font-weight: 600; margin-bottom: 4px; }
 button.card.action { width: 100%; margin-bottom: var(--space-1); }
 @media (prefers-reduced-motion: reduce) { button, .progress > span { transition: none; } }
+
+/* Programmatic focus lands on headings for screen readers; no visible ring there. Buttons and inputs keep theirs. */
+h1:focus, .prompt:focus { outline: none; }
