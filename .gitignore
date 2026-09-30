@@ -5,3 +5,7 @@ __pycache__/
 *.egg-info/
 data/progress.json
 .DS_Store
+
+# deep-research scratch; the finished report is copied into docs/
+research_notes/
+reports/
