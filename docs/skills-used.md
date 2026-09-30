@@ -57,6 +57,13 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `product-marketing` | Drafted `.agents/product-marketing.md` so later copy and launch work starts from one position. |
 | Web research | Market scan: Zetamac, Rocketblocks, FlashQuant, Preflop+, Poker Drills. |
 
+## Used for Phase 1 (2026-09-30)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | Goal-picker default, feedback timing, and new store fields, tests first. 26 tests. |
+| `run` (browser driving) | Verified welcome flow, focus management, About, feedback prompt, manifest, icons, service worker, betting note. Also caught the scroll-to-top bug fix. |
+
 ## Still to use
 
 | Skill | When |

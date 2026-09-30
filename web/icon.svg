@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#4f46e5"/>
+  <rect x="96" y="120" width="320" height="272" rx="28" fill="#f6f4ee" transform="rotate(-4 256 256)"/>
+  <text x="256" y="290" font-family="Lexend, -apple-system, Helvetica, Arial, sans-serif" font-size="150" font-weight="700" text-anchor="middle" fill="#1c1b18">25%</text>
+</svg>

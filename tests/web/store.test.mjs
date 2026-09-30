@@ -65,3 +65,15 @@ test("progress extras: days, weekly history, bests, overrides round-trip", () =>
   assert.deepEqual(s2.unlocked, ["betting"]);
   assert.deepEqual(s2.starredKeys(), []);
 });
+
+test("goal, session count, and feedback round-trip", () => {
+  const st = fakeStorage();
+  const s = new Store(st);
+  assert.equal(s.sessions, 0);
+  s.goal = "poker"; s.sessions += 1; s.feedback = "y";
+  s.save();
+  const s2 = new Store(st);
+  assert.equal(s2.goal, "poker");
+  assert.equal(s2.sessions, 1);
+  assert.equal(s2.feedback, "y");
+});

@@ -1,6 +1,8 @@
-# Applied Math
+# Napkin
 
-Short, timed drills. Ten minutes a day. See `CLAUDE.md` for who this is for and why.
+Ten minutes a day on the numbers interviewers ask. Say it out loud, then check. See `CLAUDE.md` for who this started for and why.
+
+Working name: Napkin (domain not yet secured; the name is one string in `web/app.js`, `web/index.html`, and `web/manifest.webmanifest` if it changes).
 
 ## Running it
 
@@ -22,6 +24,8 @@ Every time this repository changes, Netlify updates the page on its own.
 
 then open http://localhost:8000 in a browser.
 
+**First visit:** the page asks what you are here for (finance interviews, poker, quick math) and sets your default set. **Install:** on a phone, Add to Home Screen gives an icon and offline start.
+
 **What's on the page:** eight drill sets (interview, poker, quick math, banking interview numbers, sports betting math,
 Mighty Moose numbers, Novyx numbers, Houston energy basics), an Interview run (the FIR question, three typed answers,
 90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), a level per set from your typed
@@ -29,7 +33,7 @@ answers only (New, Learning, Solid, Fast, Cold), a daily streak with one free sk
 betting math unlocks once poker is Solid on every drill, with an "unlock anyway" link. The betting set is math practice
 only: odds are generated, and nothing is ever recorded as a bet.
 
-**One limit to know:** progress is saved inside the browser you use. Your laptop and your phone each keep their own
+**Your data:** saved inside the browser you use, nothing sent anywhere, no trackers. Export from the Stats page. **One limit:** progress is per browser. Your laptop and your phone each keep their own
 record. Practice on one device, or treat the other as scratch. Clearing the browser's site data wipes it.
 
 ## Tests

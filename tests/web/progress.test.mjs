@@ -68,3 +68,19 @@ test("session best: typed, ten or more items, ninety percent or better", () => {
   assert.equal(sessionBest(typed(5, 5, 4)), null);
   assert.equal(sessionBest(said(10)), null);
 });
+
+test("goal picker sets the default set", async () => {
+  const { defaultGroupForGoal } = await import("../../web/progress.js");
+  assert.equal(defaultGroupForGoal("interviews"), "interview");
+  assert.equal(defaultGroupForGoal("poker"), "poker");
+  assert.equal(defaultGroupForGoal("general"), "quick");
+  assert.equal(defaultGroupForGoal("anything else"), "interview");
+});
+
+test("feedback is asked once, after the tenth completed session", async () => {
+  const { shouldAskFeedback } = await import("../../web/progress.js");
+  assert.equal(shouldAskFeedback({ sessions: 9, feedback: null }), false);
+  assert.equal(shouldAskFeedback({ sessions: 10, feedback: null }), true);
+  assert.equal(shouldAskFeedback({ sessions: 12, feedback: null }), true);
+  assert.equal(shouldAskFeedback({ sessions: 12, feedback: "y" }), false);
+});

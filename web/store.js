@@ -12,6 +12,9 @@ export class Store {
     this.weekly = [];
     this.bests = {};
     this.unlocked = [];
+    this.goal = null;
+    this.sessions = 0;
+    this.feedback = null;
     try {
       const raw = storage.getItem(STORAGE_KEY);
       if (raw) {
@@ -23,6 +26,9 @@ export class Store {
         this.weekly = data.weekly ?? [];
         this.bests = data.bests ?? {};
         this.unlocked = data.unlocked ?? [];
+        this.goal = data.goal ?? null;
+        this.sessions = data.sessions ?? 0;
+        this.feedback = data.feedback ?? null;
       }
     } catch {
       // corrupt or blocked storage: start fresh, never crash a session
@@ -54,7 +60,7 @@ export class Store {
 
   save() {
     try {
-      this.storage.setItem(STORAGE_KEY, JSON.stringify({ attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked }));
+      this.storage.setItem(STORAGE_KEY, JSON.stringify({ attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback }));
     } catch {
       // private mode or full storage: the session still runs, it just won't persist
     }

@@ -1,11 +1,13 @@
 // Screens: home -> session -> summary. Also interview run, weekly check, starred, stats, explain.
 import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
 import { Store } from "./store.js";
-import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest } from "./progress.js";
+import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
 
 const app = document.getElementById("app");
 const store = new Store(window.localStorage);
 const state = { group: "interview", mode: "say", count: 10 };
+const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
+const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
 const HOME_ORDER = ["interview", "poker", "quick", "banking", "betting", "moose", "novyx", "energy", "all"];
 
 const el = (tag, attrs = {}, ...children) => {
@@ -20,13 +22,35 @@ const el = (tag, attrs = {}, ...children) => {
 };
 // render redraws in place and keeps the scroll position; screen() is for moving to a new screen.
 const render = (...nodes) => { app.replaceChildren(...nodes.flat().filter((n) => n !== null && n !== undefined && n !== false)); };
-const screen = (...nodes) => { render(...nodes); window.scrollTo(0, 0); };
+const screen = (...nodes) => {
+  render(...nodes);
+  window.scrollTo(0, 0);
+  const focus = app.querySelector("[autofocus], h1, .prompt");
+  if (focus) { if (!focus.hasAttribute("tabindex") && !focus.matches("button,input")) focus.setAttribute("tabindex", "-1"); focus.focus({ preventScroll: true }); }
+};
 const display = (it) => (it.choices ? it.choices[it.answer] : fmt(Math.round(it.answer * 10) / 10));
 const nice = (name) => name.replace(/_/g, " ");
 const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], store.starredKeys())];
 
 // ---------- home ----------
+function welcome() {
+  const pick = (goal, title, sub) => el("button", { onclick: () => { store.goal = goal; state.group = defaultGroupForGoal(goal); store.save(); home(); } },
+    el("span", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, sub)));
+  screen(
+    el("h1", {}, "Napkin"),
+    el("p", { style: "font-size:20px" }, "Ten minutes a day on the numbers interviewers ask. Say it out loud, then check."),
+    el("p", { class: "muted" }, "Built by a finance freshman for his own first-round interviews. Free. Nothing to install. Your progress stays in this browser."),
+    el("h2", {}, "What are you here for?"),
+    el("div", { class: "stack" },
+      pick("interviews", "Finance interviews", "Pot odds, multiples, buyout returns. The questions they ask out loud."),
+      pick("poker", "Poker math", "Outs, pot odds, EV, combos, with the exact number next to the shortcut."),
+      pick("general", "Quick mental math", "Percentages, fractions, growth rates, back-of-envelope numbers.")),
+    el("p", { class: "muted small", style: "margin-top:24px" }, "You can switch sets any time.")
+  );
+}
+
 function home(keepScroll = false) {
+  if (!store.goal && store.attempts.length === 0) return welcome();
   const starred = store.starredItems().length;
   const days = streak(store.days);
   const due = weeklyCheckDue(new Date(), store.weekly);
@@ -50,7 +74,7 @@ function home(keepScroll = false) {
   };
 
   (keepScroll ? render : screen)(
-    el("div", { class: "topbar" }, el("h1", {}, "Applied Math"), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
+    el("div", { class: "topbar" }, el("h1", {}, "Napkin"), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
     el("p", { class: "muted" }, "Ten minutes. Say it out loud, then check."),
     due ? el("div", { class: "card notice" },
       el("div", { class: "title" }, "Sunday check"),
@@ -73,7 +97,24 @@ function home(keepScroll = false) {
     el("div", { class: "row" },
       el("button", { class: "link", onclick: review }, "Starred"),
       el("button", { class: "link", onclick: stats }, "Stats"),
-      el("button", { class: "link", onclick: () => explain("card") }, "Index card"))
+      el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
+      el("button", { class: "link", onclick: about }, "About"))
+  );
+}
+
+function about() {
+  screen(
+    el("h1", {}, "About Napkin"),
+    el("p", {}, "Napkin is a daily warm-up for the arithmetic that comes up in finance interviews, at a poker table, and in running a small business. Say the answer out loud, reveal, grade yourself. Type mode keeps you honest."),
+    el("h2", {}, "Your data"),
+    el("p", { class: "small" }, "Everything you do here is saved in this browser only: your answers, times, stars, and streak. Nothing is sent anywhere. No account, no cookies, no trackers. Clearing this site's data in your browser erases it. Use Export on the Stats page to keep a copy."),
+    el("h2", {}, "Sports betting set"),
+    el("p", { class: "small" }, SET_NOTES.betting + " If you are under 21, it is arithmetic practice and nothing more."),
+    el("h2", {}, "Terms"),
+    el("p", { class: "small" }, "Free to use, provided as is, with no guarantee that any answer is right. Every drill is tested against an independent calculation, but if you find a wrong one, report it from the result screen and it gets fixed."),
+    el("h2", {}, "Feedback"),
+    el("p", { class: "small" }, "One line is enough. ", el("a", { href: `mailto:${FEEDBACK_EMAIL}?subject=Napkin` }, FEEDBACK_EMAIL)),
+    el("button", { class: "link", onclick: () => home() }, "Back")
   );
 }
 
@@ -93,6 +134,7 @@ function introScreen() {
   screen(
     el("h2", {}, "First time on these drills"),
     el("p", { class: "muted" }, "One line each. You will not see this again."),
+    SET_NOTES[session.group] ? el("p", { class: "star small" }, SET_NOTES[session.group]) : null,
     ...session.intros.map((n) => el("div", { class: "definition" }, el("strong", {}, nice(n)), el("br"), DEFINITIONS[n])),
     el("button", { class: "primary", onclick: () => { session.intros.forEach((n) => store.markIntroShown(n)); store.save(); nextItem(); } }, "Got it, start")
   );
@@ -175,7 +217,8 @@ function grade(item, correct, secs, typed) {
     el("div", { class: "answer num" }, display(item)),
     el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
     status,
-    el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish")
+    el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish"),
+    el("a", { class: "muted small", style: "margin-top:12px", href: `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Napkin: wrong answer? " + item.key)}&body=${encodeURIComponent(item.prompt + "\n\nShown answer: " + display(item) + "\n\nWhat I think is right:\n")}` }, "Think this answer is wrong? Report it.")
   );
   keys({ Enter: next, " ": next });
 }
@@ -186,14 +229,17 @@ function finish() {
   const right = r.filter((a) => a.correct).length;
   const total = r.reduce((s, a) => s + a.seconds, 0);
   const avg = r.length ? total / r.length : 0;
-  if (r.length >= 5) store.markDay(dayKey(new Date()));
+  if (!session.counted) {
+    session.counted = true;
+    if (r.length >= 5) { store.markDay(dayKey(new Date())); store.sessions += 1; }
+    if (session.kind === "weekly") store.addWeekly({ week: weekKey(new Date()), score: right, total: r.length, ts: Date.now() / 1000 });
+  }
   let bestLine = null;
   const best = sessionBest(r);
   if (best !== null && session.kind === "drill") {
     const isNew = store.recordBest(session.group, best);
     bestLine = isNew ? `New personal best for ${GROUP_LABELS[session.group][0]}: ${best.toFixed(1)}s.` : `Best for this set: ${store.bests[session.group].toFixed(1)}s.`;
   }
-  if (session.kind === "weekly") store.addWeekly({ week: weekKey(new Date()), score: right, total: r.length, ts: Date.now() / 1000 });
   store.save();
   if (session.kind === "interview") return interviewResult(right, total);
   const starred = store.starredItems();
@@ -204,6 +250,12 @@ function finish() {
       el("p", { class: "muted num" }, `${avg.toFixed(1)}s average · ${total.toFixed(0)}s total · ${starred.length} starred`),
       bestLine ? el("p", { class: "star" }, bestLine) : null,
       session.kind === "drill" && session.group !== "all" ? el("p", { class: "muted small" }, `${GROUP_LABELS[session.group][0]} level: ${levelOf(session.group)}${session.mode === "say" ? " (say mode does not change levels)" : ""}`) : null),
+    shouldAskFeedback(store) ? el("div", { class: "card notice" },
+      el("div", { class: "title" }, "Ten sessions in. Is this useful?"),
+      el("div", { class: "row" },
+        el("button", { class: "ok", onclick: () => { store.feedback = "y"; store.save(); finish(); } }, "Yes"),
+        el("button", { class: "miss", onclick: () => { store.feedback = "n"; store.save(); finish(); } }, "Not really")),
+      el("p", { class: "muted small", style: "margin:8px 0 0" }, "One tap. If you want to say more, About has an email.")) : null,
     starred.length ? el("h2", {}, "Starred for next time") : null,
     ...starred.slice(0, 8).map((it) => el("p", { class: "small" }, it.prompt)),
     starred.length > 8 ? el("p", { class: "muted small" }, `and ${starred.length - 8} more`) : null,
@@ -289,6 +341,10 @@ function stats() {
           el("tbody", {}, rows.map((s) => el("tr", {}, el("td", {}, nice(s.drill)), el("td", {}, DRILLS[s.drill] ? LEVELS[masteryLevel(store.attempts, s.drill, store.starredKeys())] : "–"), el("td", { class: "num" }, String(s.attempts)), el("td", { class: "num" }, `${s.accuracy}%`), el("td", { class: "num" }, `${s.avgSeconds}s`)))))
       : el("p", { class: "muted" }, "No attempts yet."),
     el("p", { class: "muted small", style: "margin-top:16px" }, "Levels use your last 20 typed answers per drill: Learning at 10 answers, Solid at 80%, Fast at 90% and under 12s, Cold at 95%, under 8s and nothing starred."),
+    el("button", { class: "link", onclick: () => {
+      const blob = new Blob([JSON.stringify({ attempts: store.attempts, stars: store.stars, days: store.days, weekly: store.weekly, bests: store.bests }, null, 1)], { type: "application/json" });
+      const a = el("a", { href: URL.createObjectURL(blob), download: `napkin-progress-${dayKey(new Date())}.json` }); document.body.append(a); a.click(); a.remove();
+    } }, "Export my data"),
     Object.keys(store.bests).length ? el("p", { class: "muted small" }, "Personal bests: " + Object.entries(store.bests).map(([g, s]) => `${GROUP_LABELS[g][0]} ${s.toFixed(0)}s`).join(" · ")) : null,
     el("button", { class: "link", onclick: home }, "Back")
   );

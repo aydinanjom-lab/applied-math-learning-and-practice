@@ -72,3 +72,13 @@ export function sessionBest(results) {
   if (acc < 0.9) return null;
   return Math.round(results.reduce((s, r) => s + r.seconds, 0) * 10) / 10;
 }
+
+// First-run goal -> default set.
+export function defaultGroupForGoal(goal) {
+  return { interviews: "interview", poker: "poker", general: "quick" }[goal] ?? "interview";
+}
+
+// One question, once, after the tenth completed session.
+export function shouldAskFeedback(store) {
+  return store.sessions >= 10 && !store.feedback;
+}

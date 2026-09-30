@@ -22,15 +22,15 @@ One web page with 38 drills in eight sets, levels, streaks, a Sunday check, an i
 
 Each phase ships on its own and is useful on its own. Effort is in evenings, assuming the same pace as the first week.
 
-### Phase 1: Public-ready (3 evenings)
+### Phase 1: Public-ready (3 evenings) — DONE 2026-09-30 as "Napkin"
 
 The page anyone can land on cold and understand.
 
-- Front page: one screen, the "interview warm-up" position, a Start button, and a one-line "built by a freshman for his own FIR interviews" story. Copy via the `copywriting` skill.
+- Front page: one screen, the "interview warm-up" position, a Start button, and a one-line "built by a freshman for his own FIR interviews" story. Built as the first-visit welcome screen with a goal picker.
 - First-run flow: pick a goal (interviews in N weeks, poker, general) which sets the default set; the definitions screen already exists.
 - Install as an app: a web manifest and service worker so Add to Home Screen gives an icon and offline start. No app store.
 - Age and purpose note on the betting set. Privacy note (what is stored, where). Terms are one paragraph.
-- Feedback: a mailto link and a one-question "was today useful? y/n" after the tenth session, stored locally.
+- Feedback: a mailto link, a "report a wrong answer" link on every result screen, and a one-tap "is this useful?" after the tenth session, stored locally.
 - Accessibility pass: keyboard-only run, screen reader labels on the progress bar and marks, contrast check in both themes.
 - Continuous checks: GitHub Actions running `npm test` on every push; Netlify deploy previews on branches.
 
