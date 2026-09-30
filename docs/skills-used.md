@@ -48,6 +48,15 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | Web research | Duolingo (flat bottom shadow on buttons, mid-gray body so green and red carry meaning), Brilliant (cool near-black dark canvas, never pure black, mono for numbers), Quizlet (single periwinkle accent on white). |
 | `run` (browser driving) | Light and dark screenshots at phone width before shipping. |
 
+## Used for the productization planning (2026-09-30)
+
+| Skill | What it was used for |
+|---|---|
+| `marketing-council` | Simulated Dunford, Halbert, Hormozi, and Godin (dissenter) on whether to open the app up and charge; produced the disagreement map and the tripwires. |
+| `pricing` | The money model kept on the shelf: one-time pack plus club license, no subscription. |
+| `product-marketing` | Drafted `.agents/product-marketing.md` so later copy and launch work starts from one position. |
+| Web research | Market scan: Zetamac, Rocketblocks, FlashQuant, Preflop+, Poker Drills. |
+
 ## Still to use
 
 | Skill | When |

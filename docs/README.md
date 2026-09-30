@@ -5,3 +5,7 @@
 - `superpowers/plans/2026-09-28-stage1-quick-math.md`: step-by-step plan for the engine and the quick-math drills (executed).
 - `superpowers/plans/2026-09-28-poker-drills.md`: the poker drills, built first (executed).
 - `skills-used.md`: which Claude Code skills produced these documents and which the build should use.
+- `superpowers/specs/2026-09-29-gamification-and-scope.md`: wording, game mechanics, and the new drill packs (built).
+- `superpowers/specs/2026-09-30-monetization-council.md`: simulated advisor council on whether to open it up and charge.
+- `superpowers/specs/2026-09-30-full-service-buildout.md`: phased plan to a public, multi-user version, with money switched off until a tripwire fires.
+- `../.agents/product-marketing.md`: positioning context the marketing skills read.
