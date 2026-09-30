@@ -10,7 +10,7 @@ One web page with 38 drills in eight sets, levels, streaks, a Sunday check, an i
 
 | Decision | Choice | Why |
 |---|---|---|
-| Retire the terminal version | Yes, now | Two copies of drill logic is the biggest maintenance risk in the project. The web page is the product. Python stays only as a reference test bed for the exact-probability math, or is deleted. |
+| Retire the terminal version | Done 2026-09-30 | Two copies of drill logic is the biggest maintenance risk in the project. The web page is the product. Python stays only as a reference test bed for the exact-probability math, or is deleted. |
 | Framework | None, keep plain files | A no-build page deploys in seconds, has no dependency rot, and is easy to explain in an interview. Revisit only if the page passes 3,000 lines. |
 | Backend | Supabase (Postgres plus auth plus row-level security) | Free tier covers thousands of users. Email magic-link sign-in means no passwords to protect. Row-level security means one line of policy keeps users' data private. Firebase is the alternative; Supabase is chosen because its data is plain SQL that Aydin can query and explain. |
 | Offline first | Yes | The browser copy stays the source of truth during a session; sync is a background merge. Works on a train, and the page never blocks on the network. |
