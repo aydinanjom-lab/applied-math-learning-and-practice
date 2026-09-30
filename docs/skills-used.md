@@ -86,6 +86,12 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | Family engine (tags, forced families, family stars, migration, queue, sync replay), 19 new generators, lesson-to-drill coverage, run variants. 48 tests. |
 | `run` (browser driving) | Miss screen (method, try-one, lesson link and back), lessons list and Try three, starred-by-family list, accounting run. |
 
+## Used for the visual design research (2026-09-30)
+
+| Skill | What it was used for |
+|---|---|
+| `deep-research` | Four parallel researchers (typography, buttons and interaction, logo and icon, screen patterns) plus a report writer; produced the plan above with sources and effort estimates. |
+
 ## Still to use
 
 | Skill | When |

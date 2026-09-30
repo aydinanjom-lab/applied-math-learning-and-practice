@@ -10,3 +10,4 @@
 - `../.agents/product-marketing.md`: positioning context the marketing skills read.
 - `setup-sync.md`: how to turn on accounts and sync (Supabase, five minutes).
 - `superpowers/specs/2026-09-30-phase3-stars-lessons-bank.md`: plan for category stars, a better miss, mini lessons, and the next bank expansion.
+- `superpowers/specs/2026-09-30-visual-design-research-plan.md`: research-backed plan for typography, buttons, icon, layout, and dark mode (plan only, not built).
