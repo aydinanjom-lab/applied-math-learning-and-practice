@@ -1,63 +1,12 @@
 // Drill generators. An item: { key, drill, prompt, answer, explanation, rel_tol, abs_tol, choices? }.
 // Prompt rules: situation first, question last, answer format stated. Jargon lives in the explanation.
 
-export function makeRng(seed = Date.now()) {
-  let a = seed >>> 0;
-  const next = () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  return {
-    random: next,
-    choice: (arr) => arr[Math.floor(next() * arr.length)],
-    randint: (lo, hi) => lo + Math.floor(next() * (hi - lo + 1)),
-    sample2: (arr) => { const i = Math.floor(next() * arr.length); let j = Math.floor(next() * (arr.length - 1)); if (j >= i) j += 1; return [arr[i], arr[j]]; },
-  };
-}
-
-export function fmt(x) {
-  if (Math.abs(x - Math.round(x)) < 1e-9) return Math.round(x).toLocaleString("en-US");
-  return x.toLocaleString("en-US", { maximumFractionDigits: 3 });
-}
-const r2 = (x) => Math.round(x * 100) / 100;
-
-export function parseAnswer(text) {
-  let t = String(text).trim().replace(/,/g, "").replace(/\$/g, "").replace(/%$/, "").replace(/x$/i, "").trim();
-  if (!t) return null;
-  const suffix = { k: 1e3, m: 1e6, b: 1e9 };
-  let mult = 1;
-  const last = t.slice(-1).toLowerCase();
-  if (suffix[last]) { mult = suffix[last]; t = t.slice(0, -1); }
-  if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(t)) return null;
-  return Number(t) * mult;
-}
-
-export function isCorrect(item, given) {
-  if (item.choices) return given === item.answer;
-  const diff = Math.abs(given - item.answer);
-  return diff <= Math.max(item.rel_tol * Math.max(Math.abs(given), Math.abs(item.answer)), item.abs_tol);
-}
-
-const item = (o) => ({ rel_tol: 0, abs_tol: 0.005, ...o });
-const comb2 = (n) => (n * (n - 1)) / 2;
-const NUM = "Answer with a number.";
-const PCT = "Answer in %.";
-const USD = "Answer in $.";
-const USDM = "Answer in $M.";
+import { makeRng, fmt, r2, parseAnswer, isCorrect, item, comb2, NUM, PCT, USD, USDM, POTS, potAndCall, exactEquity, DRAW_NAMES } from "./core.js";
+import * as interview from "./interview.js";
+import * as finance from "./finance.js";
+export { makeRng, fmt, parseAnswer, isCorrect };
 
 // ======================= poker =======================
-const POTS = [20, 30, 40, 50, 60, 75, 80, 100, 120, 150, 200, 300];
-const CALL_FRACTIONS = [[1, 4], [1, 3], [1, 2], [2, 3], [3, 4], [1, 1]];
-function potAndCall(rng) {
-  for (;;) {
-    const pot = rng.choice(POTS);
-    const [num, den] = rng.choice(CALL_FRACTIONS);
-    if ((pot * num) % den === 0 && ((pot * num) / den) % 5 === 0) return [pot, (pot * num) / den];
-  }
-}
 
 function pot_odds(rng) {
   const [pot, call] = potAndCall(rng);
@@ -72,8 +21,6 @@ function pot_odds(rng) {
   });
 }
 
-const DRAW_NAMES = { 2: "a pocket pair hoping for a set", 4: "a gutshot straight draw", 6: "two overcards", 8: "an open-ended straight draw", 9: "a flush draw", 12: "a flush draw plus a gutshot", 15: "a flush draw plus an open-ended straight draw" };
-const exactEquity = (outs, cards) => (cards === 1 ? (outs / 46) * 100 : (1 - comb2(47 - outs) / comb2(47)) * 100);
 
 function outs_equity(rng) {
   const outs = rng.randint(2, 15);
@@ -531,13 +478,15 @@ export const DRILLS = {
   rebooking_revenue, unrealized_revenue, rate_card, pipeline_revenue, lifetime_value,
   american_to_prob, decimal_to_prob, fraction_to_decimal_odds, remove_vig, bet_ev, kelly,
   oil_revenue, netback, decline, reserve_life, breakeven_price,
+  ...interview, ...finance,
 };
 
 export const GROUPS = {
   poker: ["pot_odds", "outs_equity", "ev_call", "implied_odds", "combos"],
-  interview: ["pot_odds", "outs_equity"],
+  interview: ["pot_odds", "outs_equity", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"],
   quick: ["percent_of", "fraction_to_decimal", "multiply_shortcuts", "growth_rate", "back_of_envelope"],
-  banking: ["equity_value", "multiple_to_yield", "after_tax_debt", "lbo_return", "accretion", "interest_coverage"],
+  banking: ["equity_value", "ev_from_equity", "multiple_to_yield", "pe_ratio", "dividend_yield", "after_tax_debt", "wacc", "capm", "discount_one_year", "perpetuity", "lbo_return", "lbo_moic", "accretion", "interest_coverage", "bank_spread"],
+  accounting: ["balance_sheet", "eps", "net_income_from_ebit", "working_capital", "dep_net_income", "dep_cash", "statement_direction"],
   betting: ["american_to_prob", "decimal_to_prob", "fraction_to_decimal_odds", "remove_vig", "bet_ev", "kelly"],
   moose: ["contribution_margin", "payback_months", "break_even_units", "discount_trap", "roas_to_return", "customer_value"],
   novyx: ["rebooking_revenue", "unrealized_revenue", "rate_card", "pipeline_revenue", "lifetime_value"],
@@ -547,10 +496,11 @@ GROUPS.all = Object.values(GROUPS).flat().filter((v, i, a) => a.indexOf(v) === i
 
 // Home-screen order, label, and one-line subtitle.
 export const GROUP_LABELS = {
-  interview: ["Interview set", "Pot odds and outs only. The FIR question."],
+  interview: ["Interview set", "Pot odds, outs, bet sizing, bluffs, call or fold. The FIR question and its follow-ups."],
   poker: ["Poker math", "Pot odds, outs, EV, implied odds, combos"],
   quick: ["Quick math", "Percentages, fractions, multiplication, growth, banking numbers"],
-  banking: ["Banking interview numbers", "Equity value, yields, cost of debt, buyout returns, accretion"],
+  banking: ["Banking interview numbers", "EV, P/E, cost of capital, discounting, buyout returns, bank spread"],
+  accounting: ["Accounting interview numbers", "Balance sheet, EPS, net income, working capital, the depreciation question"],
   betting: ["Sports betting math", "Odds formats, fair chance, the vig, EV, Kelly. Math only."],
   moose: ["Mighty Moose numbers", "Margin, payback, break-even, the discount trap, ad returns"],
   novyx: ["Novyx numbers", "Rebooking, revenue gaps, rate cards, pipeline, customer value"],
@@ -563,6 +513,25 @@ export const UNLOCK_AFTER = { betting: "poker" };
 
 export const DEFINITIONS = {
   pot_odds: "Pot odds: the share of the final pot your call is. Call / (pot + call) is the win rate you need to break even.",
+  pot_odds_bet: "When the pot is stated before the bet, the number is bet / (pot + 2 x bet). Half-pot needs 25%, full pot 33%.",
+  bluff_break_even: "A bluff breaks even when they fold bet / (pot + bet) of the time. Pot odds from the bettor's side.",
+  pot_odds_decision: "Call when your chance of hitting is above the pot-odds number. Judge the decision, not the result.",
+  ev_from_equity: "Enterprise value = market cap + debt - cash. The price of the whole business.",
+  pe_ratio: "P/E = price / earnings per share. Years of earnings you pay for. Flip it for the earnings yield.",
+  dividend_yield: "Dividend yield = yearly dividend / price.",
+  wacc: "WACC: the blended cost of a company's money, equity at its cost plus debt at its after-tax cost, weighted.",
+  capm: "Cost of equity by CAPM: risk-free rate + beta x market premium.",
+  discount_one_year: "A dollar later is worth less now. Divide by (1 + rate) once per year.",
+  perpetuity: "A cash flow forever is worth cash flow / (rate - growth). The terminal value formula.",
+  lbo_moic: "Buyout multiple: equity out / equity in. Debt paid down and growth both land on the equity.",
+  bank_spread: "A bank earns the gap between what it charges borrowers and pays depositors, on its loan book.",
+  balance_sheet: "Assets = liabilities + equity. Always.",
+  eps: "Earnings per share = net income / shares outstanding.",
+  net_income_from_ebit: "Net income = (EBIT - interest) x (1 - tax rate).",
+  working_capital: "Working capital = current assets - current liabilities. Cash tied up in running the business.",
+  dep_net_income: "More depreciation lowers net income by the amount times (1 - tax rate).",
+  dep_cash: "More depreciation raises cash by the tax saved: amount x tax rate.",
+  statement_direction: "Three-statement questions: one event, then which way each of net income, cash, and the balance sheet moves.",
   outs_equity: "Outs are cards that make your hand. Rule of 4 and 2: outs x 4 with two cards to come, x 2 with one.",
   ev_call: "Expected value (EV): what a decision earns on average. Win chance x pot minus lose chance x cost.",
   implied_odds: "Implied odds: pot odds plus the money you expect to win later if you hit.",

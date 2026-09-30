@@ -8,7 +8,7 @@ const store = new Store(window.localStorage);
 const state = { group: "interview", mode: "say", count: 10 };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
-const HOME_ORDER = ["interview", "poker", "quick", "banking", "betting", "moose", "novyx", "energy", "all"];
+const HOME_ORDER = ["interview", "poker", "quick", "banking", "accounting", "betting", "moose", "novyx", "energy", "all"];
 
 const el = (tag, attrs = {}, ...children) => {
   const node = document.createElement(tag);

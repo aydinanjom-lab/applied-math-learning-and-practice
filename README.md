@@ -26,8 +26,8 @@ then open http://localhost:8000 in a browser.
 
 **First visit:** the page asks what you are here for (finance interviews, poker, quick math) and sets your default set. **Install:** on a phone, Add to Home Screen gives an icon and offline start.
 
-**What's on the page:** eight drill sets (interview, poker, quick math, banking interview numbers, sports betting math,
-Mighty Moose numbers, Novyx numbers, Houston energy basics), an Interview run (the FIR question, three typed answers,
+**What's on the page:** nine drill sets (interview, poker, quick math, banking interview numbers, accounting interview numbers,
+sports betting math, Mighty Moose numbers, Novyx numbers, Houston energy basics), 57 drills in all, an Interview run (the FIR question, three typed answers,
 90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), a level per set from your typed
 answers only (New, Learning, Solid, Fast, Cold), a daily streak with one free skip a week, and personal bests. Sports
 betting math unlocks once poker is Solid on every drill, with an "unlock anyway" link. The betting set is math practice

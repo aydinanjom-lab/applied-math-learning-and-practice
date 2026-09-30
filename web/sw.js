@@ -1,6 +1,6 @@
 // Offline start: cache the app shell on install, serve from cache, refresh in the background.
-const CACHE = "napkin-v1";
-const SHELL = ["./", "./index.html", "./style.css", "./app.js", "./drills.js", "./store.js", "./progress.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const CACHE = "napkin-v2";
+const SHELL = ["./", "./index.html", "./style.css", "./app.js", "./drills.js", "./core.js", "./interview.js", "./finance.js", "./store.js", "./progress.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
