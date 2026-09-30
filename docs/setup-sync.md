@@ -5,7 +5,7 @@ Sync lets your laptop and your phone share one progress record. Without it, ever
 1. Go to supabase.com, sign in with GitHub, and create a new project. Any name, any region near you, free plan.
 2. In the project, open **SQL Editor**, paste the contents of `supabase/schema.sql`, and run it. This makes one table and the rules that keep each person's row private.
 3. Open **Authentication → Providers → Email**. Leave "Confirm email" on. Turn off "Enable email signups" only if you want to keep the site to yourself; otherwise leave it on.
-4. Open **Authentication → URL Configuration**. Set the site URL to your Netlify address (for example `https://napkin.netlify.app`) and add the same address to the redirect list. This is where the sign-in email sends people back to.
+4. Open **Authentication → URL Configuration**. Set the site URL to the page's address (GitHub Pages: `https://aydinanjom-lab.github.io/applied-math-learning-and-practice/`, or your Netlify address) and add the same address to the redirect list. This is where the sign-in email sends people back to.
 5. Open **Project Settings → API**. Copy the **Project URL** and the **anon public** key into `web/config.js`:
 
        export const SUPABASE = { url: "https://xxxx.supabase.co", anonKey: "eyJ..." };
