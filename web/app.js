@@ -6,12 +6,27 @@ import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } fr
 import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLevelCheck } from "./levels.js";
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store } from "./store.js";
+import { parseRoute, TABS } from "./router.js";
 import { SyncClient, mergeProgress } from "./sync.js";
 import { SUPABASE } from "./config.js";
 import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
 
 const app = document.getElementById("app");
 const bar = document.createElement("div"); bar.className = "actionbar"; bar.hidden = true; document.body.append(bar);
+const tabs = document.createElement("nav"); tabs.className = "tabbar"; tabs.setAttribute("aria-label", "Main"); tabs.hidden = true; document.body.append(tabs);
+const ICONS = {
+  today: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',
+  practice: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  lessons: '<path d="M4 5.5A2 2 0 0 1 6 4h5v15H6a2 2 0 0 0-2 1.5z"/><path d="M20 5.5A2 2 0 0 0 18 4h-5v15h5a2 2 0 0 1 2 1.5z"/>',
+  progress: '<path d="M5 19V13"/><path d="M10 19V8"/><path d="M15 19v-4"/><path d="M20 19V5"/>',
+  you: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+};
+const icon = (id) => { const sv = document.createElementNS("http://www.w3.org/2000/svg", "svg"); sv.setAttribute("viewBox", "0 0 24 24"); sv.setAttribute("aria-hidden", "true"); sv.innerHTML = ICONS[id]; return sv; };
+const go = (path) => { if (location.hash === path) dispatch(); else location.hash = path; };
+function showTabs(active) {
+  tabs.hidden = false;
+  tabs.replaceChildren(...TABS.map((t) => el("a", { href: t.path, class: t.id === active ? "on" : "", "aria-current": t.id === active ? "page" : null }, icon(t.id), el("span", {}, t.label))));
+}
 const MARK = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 64 64"); s.setAttribute("aria-hidden", "true");
   s.innerHTML = '<g transform="rotate(-8 32 32)"><path d="M10 10 H40 L54 24 V54 H10 Z" fill="currentColor"/><path d="M40 10 V24 H54 Z" fill="#4f46e5"/></g>'; return s; };
 const store = new Store(window.localStorage);
@@ -43,7 +58,7 @@ async function startSync() {
   if (!sync.configured) return;
   try {
     syncState.user = await sync.user();
-    if (syncState.user) { store.onSave = scheduleSync; await pullAndMerge(); if (document.querySelector("h1")?.textContent === "Napkin") home(true); }
+    if (syncState.user) { store.onSave = scheduleSync; await pullAndMerge(); if (!session) dispatch(); }
   } catch (e) { syncState.error = e.message ?? String(e); }
 }
 const saved = (() => { try { return JSON.parse(localStorage.getItem("napkin_state") || "{}"); } catch { return {}; } })();
@@ -92,10 +107,14 @@ function setBar(nodes, settle = false, tint = null) {
 const screen = (...nodes) => {
   render(...nodes);
   setBar(null);
+  tabs.hidden = true;
   window.scrollTo(0, 0);
   const focus = app.querySelector("[autofocus], h1, .prompt");
   if (focus) { if (!focus.hasAttribute("tabindex") && !focus.matches("button,input")) focus.setAttribute("tabindex", "-1"); focus.focus({ preventScroll: true }); }
 };
+// A top-level page: tab bar on, action bar off, scrolled to top.
+const page = (active, ...nodes) => { screen(...nodes); showTabs(active); };
+const back = (path) => el("button", { class: "link", onclick: () => go(path) }, "Back");
 const display = (it) => (it.choices ? it.choices[it.answer] : fmt(Math.round(it.answer * 10) / 10));
 const nice = (name) => name.replace(/_/g, " ");
 const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], store.starredKeys())];
@@ -108,6 +127,7 @@ function welcome(existing = null, onDone = null) {
     store.goal = draft.areas[0] === "poker" ? "poker" : draft.areas[0] === "quick" ? "general" : "interviews";
     state.group = "today"; state.count = draft.minutes === 5 ? 5 : draft.minutes === 20 ? 20 : 10; remember(); store.save();
     if (onDone) return onDone();
+    if (existing) return go("#/you");
     diagnosticOffer();
   };
   const step3 = () => {
@@ -157,84 +177,134 @@ function diagnosticOffer() {
     el("p", {}, `Eight typed questions from each of: ${sets.map((s) => GROUP_LABELS[s][0]).join(", ")}. Twenty seconds each. It places you honestly and stars what you miss, so your first real session goes where it counts.`),
     el("p", { class: "muted small" }, "You can skip it and take it later from the home screen.")
   );
-  setBar([el("button", { onclick: () => home() }, "Skip for now"), el("button", { class: "primary", onclick: startDiagnostic }, "Take it")]);
+  setBar([el("button", { onclick: () => go("#/") }, "Skip for now"), el("button", { class: "primary", onclick: startDiagnostic }, "Take it")]);
 }
 
-function home(keepScroll = false) {
-  if (!store.priorities && store.attempts.length === 0) return welcome();
+const chooser = (key, on, title, sub, after) =>
+  el("button", { "aria-pressed": String(state[key] === on), onclick: () => { state[key] = on; remember(); after(); } },
+    el("span", { class: "choice" }, el("span", { class: "title" }, title), sub ? el("span", { class: "muted small" }, sub) : null));
+const modeCountRows = (after) => [
+  el("h2", {}, "How do you answer?"),
+  el("div", { class: "row" }, chooser("mode", "say", "Say it", "Reveal, then grade yourself", after), chooser("mode", "type", "Type it", "Counts toward levels", after)),
+  el("h2", {}, "How many?"),
+  el("div", { class: "row" }, [5, 10, 20].map((n) => chooser("count", n, String(n), n === 5 ? "quick hit" : n === 10 ? "about 5 min" : "long", after))),
+];
+const rungBadge = (r) => el("span", { class: `badge l${Math.min(4, Math.floor(r.rung / 2))}` }, r.name + (r.stale ? " · stale" : ""));
+const noticeCard = (title, text, button) => el("div", { class: "card notice", style: "margin-top:16px" }, el("div", { class: "title" }, title), el("p", { class: "muted small" }, text), button);
+
+// Today: one action, status, and cards only when they matter.
+function today() {
   const starred = store.starredItems().length;
   const days = streak(store.days);
   const due = weeklyCheckDue(new Date(), store.weekly);
   const pri = prioritySets();
   const dUntil = daysUntil(store.priorities?.interviewDate ?? null);
-  const choice = (key, on, title, sub, pressed) =>
-    el("button", { "aria-pressed": String(pressed), onclick: () => { state[key] = on; remember(); home(true); } },
-      el("span", { class: "choice" }, el("span", { class: "title" }, title), sub ? el("span", { class: "muted small" }, sub) : null));
-  const setButton = (g) => {
-    const [title, sub] = g === "today" ? ["Today", `Starred first, then your priorities: ${pri.map((s) => GROUP_LABELS[s][0]).join(", ")}.`] : GROUP_LABELS[g];
-    if (g !== "today" && g !== "all" && !unlockedSet(g)) {
-      return el("div", { class: "card locked" },
-        el("div", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, `Locked until ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} reaches Solid.`)),
-        el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); home(true); } }, "Unlock anyway"));
-    }
-    const r = g === "today" || g === "all" ? null : rungOf(g);
-    return el("button", { "aria-pressed": String(state.group === g), onclick: () => { state.group = g; remember(); home(true); } },
-      el("span", { class: "choice" },
-        el("span", { class: "titlerow" }, el("span", { class: "title" }, title), r ? el("span", { class: `badge l${Math.min(4, Math.floor(r.rung / 2))}` }, r.name + (r.stale ? " · stale" : "")) : null),
-        el("span", { class: "muted small" }, sub)));
-  };
-  const rest = ALL_SETS.filter((g) => !pri.includes(g));
   const todayDone = store.days.includes(dayKey(new Date()));
-  const groupName = state.group === "today" ? "Today" : GROUP_LABELS[state.group][0];
-  const startLabel = `Start · ${groupName} · ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`;
   const diagDue = diagnosticDue(store.diagnostics);
-  (keepScroll ? render : screen)(
+  const toLearn = store.toLearnItems();
+  const modeChip = (m, label) => el("button", { class: "chip", "aria-pressed": String(state.mode === m), onclick: () => { state.mode = m; remember(); today(); } }, label);
+  const countChip = (n) => el("button", { class: "chip", "aria-pressed": String(state.count === n), onclick: () => { state.count = n; remember(); today(); } }, String(n));
+  page("today",
     el("div", { class: "topbar" }, el("div", { class: "brand" }, MARK(), el("h1", {}, "Napkin")), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
     el("div", { class: "status num" },
       el("span", {}, todayDone ? "Today: done" : "Today: not yet"),
       el("span", {}, starred ? el("strong", {}, `${starred} starred`) : "Nothing starred"),
       dUntil !== null && dUntil >= 0 ? el("span", { class: dUntil <= 14 ? "star" : "" }, `Interview in ${dUntil} day${dUntil === 1 ? "" : "s"}`) : null,
       due ? el("span", { class: "star" }, "Sunday check due") : null),
-    el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, startLabel),
-    dUntil !== null && dUntil < 0 ? el("div", { class: "card notice", style: "margin-top:16px" },
-      el("div", { class: "title" }, "Your interview date has passed"),
-      el("p", { class: "muted small" }, "How did it go? Set the next date, or clear it."),
-      el("div", { class: "row" }, el("button", { onclick: () => welcome(store.priorities, () => home()) }, "Set the next date"), el("button", { onclick: () => { store.priorities = { ...store.priorities, interviewDate: null }; store.save(); home(); } }, "No date for now"))) : null,
-    diagDue ? el("div", { class: "card notice", style: "margin-top:16px" },
-      el("div", { class: "title" }, store.diagnostics.length ? "Time for a re-check" : "Six-minute check"),
-      el("p", { class: "muted small" }, store.diagnostics.length ? "It has been four weeks. Eight typed questions per priority set, to see what moved." : "Eight typed questions per priority set. Places you honestly and stars what you miss."),
-      el("button", { class: "primary", onclick: startDiagnostic }, "Take it")) : null,
-    due ? el("div", { class: "card notice", style: "margin-top:16px" },
-      el("div", { class: "title" }, "Sunday check"),
-      el("p", { class: "muted small" }, "Ten typed questions from what you have started. This is the honest score."),
-      el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
-    store.toLearnItems().length ? el("button", { class: "card notice action", onclick: lessonsList },
-      el("span", { class: "choice" }, el("span", { class: "title" }, `Lessons · ${store.toLearnItems().length} to learn`), el("span", { class: "muted small" }, store.toLearnItems().slice(0, 3).map((t) => (FAMILIES[t.family] ?? { name: nice(t.drill) }).name).join(" · ") + (store.toLearnItems().length > 3 ? " · more" : "")))) : null,
+    el("button", { class: "primary", onclick: () => startSession("today", state.mode, state.count) }, `Start today's ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`),
+    el("p", { class: "muted small", style: "margin:8px 0 0" }, `Starred first, then your priorities: ${pri.map((s) => GROUP_LABELS[s][0]).join(", ")}.`),
+    el("div", { class: "chips" }, modeChip("say", "Say it"), modeChip("type", "Type it"), el("span", { class: "chipgap" }), countChip(5), countChip(10), countChip(20)),
+    toLearn.length ? el("button", { class: "card notice action", style: "margin-top:16px", onclick: () => go("#/lessons") },
+      el("span", { class: "choice" }, el("span", { class: "title" }, `Lessons · ${toLearn.length} to learn`), el("span", { class: "muted small" }, toLearn.slice(0, 3).map((t) => (FAMILIES[t.family] ?? { name: nice(t.drill) }).name).join(" · ") + (toLearn.length > 3 ? " · more" : "")))) : null,
+    dUntil !== null && dUntil < 0 ? noticeCard("Your interview date has passed", "How did it go? Set the next date, or clear it.",
+      el("div", { class: "row" }, el("button", { onclick: () => go("#/priorities") }, "Set the next date"), el("button", { onclick: () => { store.priorities = { ...store.priorities, interviewDate: null }; store.save(); today(); } }, "No date for now"))) : null,
+    diagDue ? noticeCard(store.diagnostics.length ? "Time for a re-check" : "Six-minute check", store.diagnostics.length ? "It has been four weeks. Eight typed questions per priority set, to see what moved." : "Eight typed questions per priority set. Places you honestly and stars what you miss.", el("button", { class: "primary", onclick: startDiagnostic }, "Take it")) : null,
+    due ? noticeCard("Sunday check", "Ten typed questions from what you have started. This is the honest score.", el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
     el("h2", {}, "Your sets"),
-    el("div", { class: "stack" }, ["today", ...pri].map(setButton)),
-    el("button", { class: "link", onclick: () => { state.more = !state.more; home(true); } }, state.more ? "Fewer sets" : `More sets (${rest.length + 1})`),
-    state.more ? el("div", { class: "stack" }, [...rest, "all"].map(setButton)) : null,
-    el("h2", {}, "How do you answer?"),
-    el("div", { class: "row" },
-      choice("mode", "say", "Say it", "Reveal, then grade yourself", state.mode === "say"),
-      choice("mode", "type", "Type it", "Counts toward levels", state.mode === "type")),
-    el("h2", {}, "How many?"),
-    el("div", { class: "row" }, [5, 10, 20].map((n) => choice("count", n, String(n), n === 5 ? "quick hit" : n === 10 ? "about 5 min" : "long", state.count === n))),
-    el("h2", {}, "Interview runs"),
-    el("button", { class: "card action", onclick: runsMenu },
-      el("span", { class: "choice" }, el("span", { class: "title" }, "Poker, finance, or accounting"), el("span", { class: "muted small" }, "Three typed answers against the clock, pass or fail."))),
-    el("div", { class: "spacer" }),
-    el("div", { class: "row", style: "margin-top:24px" },
-      el("button", { class: "link", onclick: review }, "Starred"),
-      el("button", { class: "link", onclick: stats }, "Levels"),
-      el("button", { class: "link", onclick: lessonsList }, "Lessons"),
-      el("button", { class: "link", onclick: glossary }, "Glossary"),
-      el("button", { class: "link", onclick: () => welcome(store.priorities, () => home()) }, "Priorities"),
-      el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
-      el("button", { class: "link", onclick: about }, "About"),
-      el("button", { class: "link", onclick: account }, syncState.user ? "Account ✓" : "Account"))
+    el("div", { class: "stack" }, pri.map((g) => setCard(g))),
+    el("button", { class: "link", onclick: () => go("#/practice") }, "All sets and interview runs")
   );
-  if (!keepScroll) setBar(null);
+}
+
+function setCard(g) {
+  const [title, sub] = GROUP_LABELS[g];
+  if (g !== "all" && !unlockedSet(g)) {
+    return el("div", { class: "card locked" },
+      el("div", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, `Locked until ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} reaches Solid.`)),
+      el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); dispatch(); } }, "Unlock anyway"));
+  }
+  const r = g === "all" ? null : rungOf(g);
+  return el("button", { onclick: () => go(`#/set/${g}`) },
+    el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, title), r ? rungBadge(r) : null), el("span", { class: "muted small" }, sub)));
+}
+
+// Practice: every set, the pickers, and the interview runs.
+function practice() {
+  const pri = prioritySets();
+  const rest = ALL_SETS.filter((g) => !pri.includes(g));
+  page("practice",
+    el("h1", {}, "Practice"),
+    el("p", { class: "muted" }, "Pick a set to see where you stand and start it. Your priority sets come first."),
+    el("h2", {}, "Your sets"), el("div", { class: "stack" }, pri.map(setCard)),
+    el("h2", {}, "Other sets"), el("div", { class: "stack" }, [...rest, "all"].map(setCard)),
+    ...modeCountRows(practice),
+    el("h2", {}, "Interview runs"),
+    el("button", { class: "card action", onclick: () => go("#/runs") },
+      el("span", { class: "choice" }, el("span", { class: "title" }, "Poker, finance, or accounting"), el("span", { class: "muted small" }, "Three typed answers against the clock, pass or fail.")))
+  );
+}
+
+// One set: rung, what is next, level check, best, the drills in it, start.
+function setPage(g) {
+  if (!GROUP_LABELS[g]) return go("#/practice");
+  const [title, sub] = GROUP_LABELS[g];
+  const r = g === "all" ? null : rungOf(g);
+  const locked = r && store.checkLocks[g] && Date.now() / 1000 - store.checkLocks[g] < 86400;
+  const unlocked = g === "all" || unlockedSet(g);
+  const drills = GROUPS[g].concat(LATER[g] && r?.rung >= 4 ? LATER[g] : []);
+  const stat = (d) => { const rows = store.attempts.filter((a) => a.drill === d); return rows.length ? `${Math.round((100 * rows.filter((a) => a.correct).length) / rows.length)}% of ${rows.length}` : "not yet tried"; };
+  screen(
+    el("div", { class: "topbar" }, el("h1", {}, title), r ? rungBadge(r) : null),
+    el("p", { class: "muted" }, sub),
+    SET_NOTES[g] ? el("p", { class: "star small" }, SET_NOTES[g]) : null,
+    !unlocked ? el("div", { class: "card locked" }, el("div", { class: "choice" }, el("span", { class: "title" }, "Locked"), el("span", { class: "muted small" }, `Opens when ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} reaches Solid.`)), el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); setPage(g); } }, "Unlock anyway")) : null,
+    r ? el("div", { class: "card" }, el("div", { class: "title" }, `Level: ${r.name}`), el("div", { class: "muted small" }, r.next),
+      r.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(g, r.canCheck) }, `Sit the ${RUNGS[r.canCheck]} check`) : locked ? el("div", { class: "muted small" }, "Check locked for 24 hours after a miss.") : null) : null,
+    store.bests[g] !== undefined ? el("p", { class: "muted small num" }, `Personal best: ${store.bests[g].toFixed(0)}s for a session.`) : null,
+    LATER[g] && !(r?.rung >= 4) ? el("p", { class: "muted small" }, `${LATER[g].length} more drills join this set once it is Solid.`) : null,
+    ...modeCountRows(() => setPage(g)),
+    el("h2", {}, `Drills (${drills.length})`),
+    el("div", { class: "stack" }, drills.map((d) => el("div", { class: "card", style: "padding:12px 14px" },
+      el("div", { class: "titlerow" }, el("span", { class: "title" }, nice(d)), el("span", { class: "muted small num" }, stat(d))),
+      el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
+      LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => go(`#/lesson/${LESSON_BY_FAMILY[d]}`) }, "One-minute method") : null))),
+    el("div", { style: "height:16px" }),
+    back("#/practice")
+  );
+  if (unlocked) setBar([el("button", { class: "primary", onclick: () => startSession(g, state.mode, state.count) }, `Start · ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`)]);
+}
+
+// You: account, priorities, club, reference, about.
+function you() {
+  const row = (title, sub, path) => el("button", { onclick: () => go(path) }, el("span", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, sub)));
+  const pri = store.priorities;
+  page("you",
+    el("h1", {}, "You"),
+    el("div", { class: "stack" },
+      row(syncState.user ? "Account ✓" : "Account", syncState.user ? `Signed in as ${syncState.user.email}. Progress syncs between devices.` : sync.configured ? "Sign in by email link to share progress between devices." : "Sync is not switched on for this copy.", "#/account"),
+      row("Priorities", pri ? `${(pri.areas ?? []).map((a) => AREAS[a]?.title ?? a).join(", ")}${pri.interviewDate ? ` · interview ${pri.interviewDate}` : ""} · ${pri.minutes} min` : "Pick what you are here for.", "#/priorities"),
+      row("Club", "Join a club with a code, or lead one. Coming next.", "#/club"),
+      row("Poker index card", "The pot-odds answer and its follow-ups, on one card.", "#/card"),
+      row("About", "What Napkin is, your data, terms, keyboard shortcuts, feedback.", "#/about"))
+  );
+}
+
+function clubPage() {
+  page("you",
+    el("h1", {}, "Club"),
+    el("p", {}, "Clubs are next on the build list: a join code, a shared ten-question session everyone runs from the same seed, and a leader page that shows only aggregate numbers."),
+    el("p", { class: "muted small" }, "Until then, this page is a placeholder. Nothing here records anything."),
+    back("#/you"));
 }
 
 function account() {
@@ -243,7 +313,7 @@ function account() {
       el("h1", {}, "Account"),
       el("p", {}, "Sync is not switched on for this copy of Napkin. Your progress stays in this browser."),
       el("p", { class: "muted small" }, "To share progress between your laptop and phone, follow docs/setup-sync.md in the repository. About five minutes."),
-      el("button", { class: "link", onclick: () => home() }, "Back")
+      back("#/you")
     );
   }
   if (syncState.user) {
@@ -254,9 +324,9 @@ function account() {
         el("p", { class: "muted small num" }, syncState.error ? `Last sync failed: ${syncState.error}` : syncState.last ? `Last synced ${syncState.last.toLocaleTimeString()}` : "Not synced yet"),
         el("div", { class: "row" },
           el("button", { onclick: async () => { await pullAndMerge(); account(); } }, "Sync now"),
-          el("button", { onclick: async () => { await sync.signOut(); syncState.user = null; store.onSave = null; home(); } }, "Sign out"))),
+          el("button", { onclick: async () => { await sync.signOut(); syncState.user = null; store.onSave = null; go("#/you"); } }, "Sign out"))),
       el("p", { class: "muted small" }, "Signing out leaves this browser's copy in place. Your account copy is untouched."),
-      el("button", { class: "link", onclick: () => home() }, "Back")
+      back("#/you")
     );
   }
   const input = el("input", { type: "email", inputmode: "email", autocomplete: "email", placeholder: "you@iu.edu", "aria-label": "email", required: "" });
@@ -274,7 +344,7 @@ function account() {
     } }, input, el("div", { style: "height:12px" }), sendBtn),
     status,
     el("p", { class: "muted small" }, "Progress already in this browser is kept and merged in, not replaced."),
-    el("button", { class: "link", onclick: () => home() }, "Back")
+    back("#/you")
   );
   input.focus();
 }
@@ -290,25 +360,28 @@ function lessonsList() {
       el("div", { class: "muted small" }, t.example),
       fam.method ? el("p", { class: "method", style: "margin:8px 0 0" }, el("strong", {}, "Method: "), fam.method) : null,
       el("div", { class: "row", style: "margin-top:8px" },
-        lessonId ? el("button", { class: "primary", onclick: () => lesson(lessonId, lessonsList) }, store.lessonsRead.includes(lessonId) ? `Read again: ${LESSON_BY_ID[lessonId].title}` : `Read: ${LESSON_BY_ID[lessonId].title}`) : null,
-        el("button", { onclick: () => { const items = []; const rng = makeRng(); for (let k = 0; k < 40 && items.length < 3; k++) { const it = DRILLS[t.drill](rng, { family: t.family }); if (!items.some((x) => x.key === it.key)) items.push(it); } session = null; startSession(state.group, "type", items.length, { items, kind: "lesson" }); } }, "Try three")));
+        lessonId ? el("button", { class: "primary", onclick: () => go(`#/lesson/${lessonId}`) }, store.lessonsRead.includes(lessonId) ? `Read again: ${LESSON_BY_ID[lessonId].title}` : `Read: ${LESSON_BY_ID[lessonId].title}`) : null,
+        el("button", { onclick: () => { const items = []; const rng = makeRng(); for (let k = 0; k < 40 && items.length < 3; k++) { const it = DRILLS[t.drill](rng, { family: t.family }); if (!items.some((x) => x.key === it.key)) items.push(it); } session = null; startSession("today", "type", items.length, { items, kind: "lesson" }); } }, "Try three")));
   };
-  screen(
+  page("lessons",
     el("h1", {}, "Lessons"),
     flagged.length ? el("h2", { style: "margin-top:0" }, `To learn (${flagged.length})`) : null,
     flagged.length ? el("p", { class: "muted small" }, "Kinds of question you marked \"I don't know this\". Each clears after two clean typed reps, or tap Got it.") : null,
     ...flagged.map(flaggedRow),
     flagged.length ? el("h2", {}, "All lessons") : null,
     el("p", { class: "muted" }, "One minute each. Standard methods, nothing invented. Read one, then try three."),
-    el("div", { class: "stack" }, LESSONS.map((l) => el("button", { onclick: () => lesson(l.id, lessonsList) },
+    el("div", { class: "stack" }, LESSONS.map((l) => el("button", { onclick: () => go(`#/lesson/${l.id}`) },
       el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, l.title), store.lessonsRead.includes(l.id) ? el("span", { class: "badge l3" }, "read") : null), el("span", { class: "muted small" }, l.method))))),
-    el("div", { style: "height:16px" }),
-    el("button", { class: "link", onclick: () => home() }, "Back")
+    el("h2", {}, "Reference"),
+    el("div", { class: "stack" },
+      el("button", { onclick: () => go("#/glossary") }, el("span", { class: "choice" }, el("span", { class: "title" }, "Glossary"), el("span", { class: "muted small" }, `Every drill's one-line definition, with a box for your own note. ${Object.keys(store.notes).length} notes so far.`))),
+      el("button", { onclick: () => go("#/card") }, el("span", { class: "choice" }, el("span", { class: "title" }, "Poker index card"), el("span", { class: "muted small" }, "The pot-odds answer and its follow-ups."))))
   );
 }
 
-function lesson(id, back) {
+function lesson(id, backTo) {
   const l = LESSON_BY_ID[id];
+  if (!l) return go("#/lessons");
   store.markLessonRead(id); store.save();
   const tryThree = () => {
     const rng = makeRng();
@@ -323,7 +396,7 @@ function lesson(id, back) {
     }
     if (!items.length) return;
     session = null;
-    startSession(state.group, "type", items.length, { items, kind: "lesson" });
+    startSession("today", "type", items.length, { items, kind: "lesson" });
   };
   screen(
     el("h1", {}, l.title),
@@ -333,7 +406,7 @@ function lesson(id, back) {
     el("h2", {}, "When it works"), el("p", {}, l.when),
     el("h2", {}, "The trap"), el("p", {}, l.trap),
     el("p", { class: "muted small", style: "margin-top:16px" }, "This is the tool's explanation. Write your own in your notes without looking; if you can't, you don't own it yet."),
-    el("button", { class: "link", onclick: back ?? (() => home()) }, "Back")
+    el("button", { class: "link", onclick: backTo ?? (() => go("#/lessons")) }, "Back")
   );
   setBar([el("button", { class: "primary", onclick: tryThree }, "Try three, typed")]);
 }
@@ -353,7 +426,7 @@ function about() {
       el("button", { class: "link small", onclick: () => { try { localStorage.setItem("napkin_keys", keysOn() ? "off" : "on"); } catch {} about(); } }, keysOn() ? "Turn single-letter shortcuts off" : "Turn shortcuts on")),
     el("h2", {}, "Feedback"),
     el("p", { class: "small" }, "One line is enough. ", el("a", { href: `mailto:${FEEDBACK_EMAIL}?subject=Napkin` }, FEEDBACK_EMAIL)),
-    el("button", { class: "link", onclick: () => home() }, "Back")
+    back("#/you")
   );
 }
 
@@ -369,6 +442,7 @@ function startSession(group, mode, count, opts = {}) {
   if (group === "today" && mode === "say" && urgent !== null && urgent >= 0 && urgent <= 3 && !opts.items) mode = "type";
   const items = opts.items ?? (group === "today" ? todayQueue(store, pri, count, weightsFor(store, pri, store.priorities?.interviewDate ?? null), makeRng()) : buildQueue(store, names, count, makeRng()));
   const intros = group === "today" ? [] : names.filter((n) => !store.introShown.includes(n));
+  if (location.hash !== "#/session") history.pushState(null, "", "#/session");
   session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", run: opts.run ?? null,
     target: opts.target ?? null, checkSet: opts.checkSet ?? null, diagSets: opts.diagSets ?? null,
     starredAtStart: new Set(items.filter((it) => store.isStarred(it)).map((it) => it.key)), starsBefore: new Set(store.starredKeys()), streakBefore: streak(store.days), todayBefore: store.days.includes(dayKey(new Date())) };
@@ -398,7 +472,7 @@ function noteBox(drill) {
 }
 
 function glossary() {
-  const sets = HOME_ORDER.filter((g) => g !== "all");
+  const sets = [...new Set([...prioritySets(), ...ALL_SETS])];
   screen(
     el("h1", {}, "Glossary"),
     el("p", { class: "muted" }, "Every drill's one-line definition, by set. The same lines you see the first time a drill appears. The box under each one is for your own note; it saves as you type."),
@@ -410,11 +484,11 @@ function glossary() {
         el("div", { class: "title" }, nice(d)),
         el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
         FAMILIES[d]?.method ? el("div", { class: "small muted", style: "font-weight:400;margin-top:4px" }, el("strong", {}, "Method: "), FAMILIES[d].method) : null,
-        LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => lesson(LESSON_BY_FAMILY[d], glossary) }, "Read the one-minute method") : null,
+        LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => go(`#/lesson/${LESSON_BY_FAMILY[d]}`) }, "Read the one-minute method") : null,
         noteBox(d)))),
     ]),
     el("div", { style: "height:16px" }),
-    el("button", { class: "link", onclick: () => home() }, "Back")
+    back("#/lessons")
   );
 }
 
@@ -601,8 +675,8 @@ function finish() {
   );
   setBar([
     session.kind === "drill" ? el("button", { class: "primary", onclick: () => startSession(session.group, session.mode, session.items.length) }, "Again") : null,
-    session.kind === "lesson" ? el("button", { class: "primary", onclick: lessonsList }, "Back to lessons") : null,
-    el("button", { onclick: () => home() }, "Home"),
+    session.kind === "lesson" ? el("button", { class: "primary", onclick: () => go("#/lessons") }, "Back to lessons") : null,
+    el("button", { onclick: () => go("#/") }, "Home"),
   ]);
 }
 
@@ -652,7 +726,7 @@ function diagnosticResult() {
     store.starredItems().length ? el("p", { class: "small star", style: "margin-top:12px" }, `${store.starredItems().length} kinds starred. They come first in your next session.`) : null,
     el("p", { class: "muted small" }, "Levels above Mostly right need a level check, which you can sit from the Levels screen once your typed sessions support it.")
   );
-  setBar([el("button", { class: "primary", onclick: () => startSession("today", "type", state.count) }, "Start a typed session"), el("button", { onclick: () => home() }, "Home")]);
+  setBar([el("button", { class: "primary", onclick: () => startSession("today", "type", state.count) }, "Start a typed session"), el("button", { onclick: () => go("#/") }, "Home")]);
 }
 
 // ---------- level checks ----------
@@ -674,7 +748,7 @@ function checkResult(right) {
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 10 · needed ${checkRequirement(session.target).need}`),
       el("p", { class: "muted" }, pass ? `${GROUP_LABELS[session.checkSet][0]} is now ${RUNGS[session.target]}. It decays if you stop practising typed.` : "Misses are starred. The check unlocks again in 24 hours; drill the starred kinds first."))
   );
-  setBar([el("button", { class: "primary", onclick: () => startSession(session.checkSet, "type", 10) }, "Drill this set"), el("button", { onclick: () => home() }, "Home")]);
+  setBar([el("button", { class: "primary", onclick: () => startSession(session.checkSet, "type", 10) }, "Drill this set"), el("button", { onclick: () => go("#/") }, "Home")]);
 }
 
 function runsMenu() {
@@ -684,7 +758,7 @@ function runsMenu() {
     el("div", { class: "stack" }, Object.entries(RUNS).map(([id, r]) => el("button", { onclick: () => startInterview(id) },
       el("span", { class: "choice" }, el("span", { class: "title" }, `${r.title} · ${r.seconds}s`), el("span", { class: "muted small" }, r.sub))))),
     el("div", { style: "height:16px" }),
-    el("button", { class: "link", onclick: () => home() }, "Back")
+    back("#/practice")
   );
 }
 
@@ -703,24 +777,12 @@ function interviewResult(right, total) {
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 3 correct in ${total.toFixed(0)}s`),
       el("p", { class: "muted" }, pass ? `${run.title} passed under time. Do it again tomorrow.` : right < 3 ? "One wrong answer is a fail in the room. Read the method, then run it again." : `All correct but over ${run.seconds} seconds. Speed comes from reps. Run it again.`)),
     el("div", { style: "height:24px" }),
-    el("button", { class: "link", onclick: runsMenu }, "Other runs")
+    el("button", { class: "link", onclick: () => go("#/runs") }, "Other runs")
   );
-  setBar([el("button", { class: "primary", onclick: () => startInterview(session.run ?? "poker") }, "Run it again"), el("button", { onclick: () => home() }, "Home")]);
+  setBar([el("button", { class: "primary", onclick: () => startInterview(session.run ?? "poker") }, "Run it again"), el("button", { onclick: () => go("#/") }, "Home")]);
 }
 
 // ---------- other screens ----------
-function review() {
-  const items = store.starredItems();
-  screen(
-    el("h1", {}, "Starred"),
-    items.length ? el("p", { class: "muted" }, "A star is a kind of question, not one set of numbers. Each clears after two correct answers in a row.") : el("div", { class: "empty" }, el("p", {}, "Nothing starred."), el("p", { class: "small" }, "Misses land here as kinds of question and come back with new numbers. Start a session to fill it.")),
-    ...items.map((st) => el("div", { class: "card", style: "margin-bottom:8px" }, el("div", { class: "title" }, FAMILIES[st.family]?.name ?? nice(st.drill)), el("div", { class: "muted small" }, st.example), el("div", { class: "muted small" }, `clean reps so far: ${st.streak} / 2 · comes back with new numbers`))),
-    el("div", { style: "height:16px" }),
-    el("button", { class: "link", onclick: () => home() }, "Back")
-  );
-  setBar([el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, items.length ? "Start (starred first)" : "Start a session")]);
-}
-
 function sparkline(points) {
   if (points.length < 3) return el("span", { class: "muted small" }, "–");
   const w = 72, h = 22, pad = 2;
@@ -751,20 +813,25 @@ function stats() {
   for (const a of store.attempts) { const d = dayKey(new Date(a.ts * 1000)); ((byDrillDay[a.drill] ??= {})[d] ??= []).push(a); }
   const series = (drill) => { const days = Object.keys(byDrillDay[drill] ?? {}).sort().slice(-8); return days.map((d) => acc(byDrillDay[drill][d])); };
   if (!store.attempts.length) {
-    screen(el("h1", {}, "Stats"), el("div", { class: "empty" }, el("p", {}, "No sessions yet."), el("p", { class: "small" }, "Accuracy, speed, and a level per drill show up here after your first session.")), el("button", { class: "link", onclick: () => home() }, "Back"));
-    setBar([el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, "Start a session")]);
+    page("progress", el("h1", {}, "Progress"), el("div", { class: "empty" }, el("p", {}, "No sessions yet."), el("p", { class: "small" }, "Levels, starred kinds, accuracy, and speed show up here after your first session.")),
+      el("button", { class: "primary", onclick: () => startSession("today", state.mode, state.count) }, "Start a session"));
     return;
   }
+  const starredList = store.starredItems();
   const setRows = [...new Set([...prioritySets(), ...ALL_SETS])].map((set) => ({ set, d: rungOf(set) })).filter((r) => r.d.rung > 0 || prioritySets().includes(r.set));
-  screen(
-    el("h1", {}, "Levels"),
+  page("progress",
+    el("h1", {}, "Progress"),
+    el("h2", {}, "Levels"),
     el("div", { class: "stack" }, setRows.map(({ set, d }) => {
       const locked = store.checkLocks[set] && Date.now() / 1000 - store.checkLocks[set] < 86400;
       return el("div", { class: "card" },
-        el("div", { class: "titlerow" }, el("span", { class: "title" }, GROUP_LABELS[set][0]), el("span", { class: `badge l${Math.min(4, Math.floor(d.rung / 2))}` }, d.name + (d.stale ? " · stale" : ""))),
+        el("div", { class: "titlerow" }, el("button", { class: "link", style: "padding:0;min-height:0;font-weight:600", onclick: () => go(`#/set/${set}`) }, GROUP_LABELS[set][0]), rungBadge(d)),
         el("div", { class: "muted small" }, d.next),
         d.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(set, d.canCheck) }, `Sit the ${RUNGS[d.canCheck]} check`) : locked ? el("div", { class: "muted small" }, "Check locked for 24 hours after a miss.") : null);
     })),
+    el("h2", {}, `Starred (${starredList.length})`),
+    starredList.length ? el("p", { class: "muted small" }, "A star is a kind of question, not one set of numbers. Each clears after two correct answers in a row, and starred kinds come first in every session.") : el("p", { class: "muted small" }, "Nothing starred. Misses land here as kinds of question and come back with new numbers."),
+    ...starredList.map((st) => el("div", { class: "card", style: "margin-bottom:8px;padding:12px 14px" }, el("div", { class: "title" }, FAMILIES[st.family]?.name ?? nice(st.drill)), el("div", { class: "muted small" }, st.example), el("div", { class: "muted small num" }, `clean reps so far: ${st.streak} / 2`))),
     el("h2", {}, "Stats"),
     el("div", { class: "tiles" },
       el("div", { class: "tile" }, el("div", { class: "v num" }, todayAcc === null ? "–" : `${todayAcc}%`), el("div", { class: "l" }, "today")),
@@ -782,8 +849,7 @@ function stats() {
       const blob = new Blob([JSON.stringify({ attempts: store.attempts, stars: store.stars, days: store.days, weekly: store.weekly, bests: store.bests }, null, 1)], { type: "application/json" });
       const a = el("a", { href: URL.createObjectURL(blob), download: `napkin-progress-${dayKey(new Date())}.json` }); document.body.append(a); a.click(); a.remove();
     } }, "Export my data"),
-    Object.keys(store.bests).length ? el("p", { class: "muted small" }, "Personal bests: " + Object.entries(store.bests).map(([g, s]) => `${g === "today" ? "Today" : GROUP_LABELS[g]?.[0] ?? g} ${s.toFixed(0)}s`).join(" · ")) : null,
-    el("button", { class: "link", onclick: () => home() }, "Back")
+    Object.keys(store.bests).length ? el("p", { class: "muted small" }, "Personal bests: " + Object.entries(store.bests).map(([g, s]) => `${g === "today" ? "Today" : GROUP_LABELS[g]?.[0] ?? g} ${s.toFixed(0)}s`).join(" · ")) : null
   );
 }
 
@@ -791,9 +857,9 @@ function explain(name) {
   screen(
     el("h1", {}, name === "card" ? "Poker index card" : nice(name)),
     el("pre", {}, EXPLANATIONS[name]),
-    name === "card" ? el("div", { class: "row" }, GROUPS.poker.map((n) => el("button", { class: "link", onclick: () => explain(n) }, nice(n)))) : null,
+    name === "card" ? el("div", { class: "row" }, GROUPS.poker.map((n) => el("button", { class: "link", onclick: () => go(`#/explain/${n}`) }, nice(n)))) : null,
     el("p", { class: "muted small" }, "Read it once, then write it in your own words without looking. If you can't, you don't own it yet."),
-    el("button", { class: "link", onclick: () => (name === "card" ? home() : explain("card")) }, "Back")
+    el("button", { class: "link", onclick: () => (name === "card" ? go("#/lessons") : go("#/card")) }, "Back")
   );
 }
 
@@ -811,5 +877,30 @@ function keys(map) {
   document.addEventListener("keydown", keyHandler);
 }
 
-home();
+function dispatch() {
+  const r = parseRoute(location.hash);
+  if (r.name === "session") { if (session) return; return go("#/"); }
+  session = null; clearTimeout(diagTimer); keys({});
+  if (!store.priorities && store.attempts.length === 0 && r.name !== "about") return welcome();
+  switch (r.name) {
+    case "today": return today();
+    case "practice": return practice();
+    case "set": return setPage(r.params.id);
+    case "runs": return runsMenu();
+    case "lessons": return lessonsList();
+    case "lesson": return lesson(r.params.id);
+    case "glossary": return glossary();
+    case "card": return explain("card");
+    case "explain": return EXPLANATIONS[r.params.name] ? explain(r.params.name) : go("#/card");
+    case "progress": return stats();
+    case "you": return you();
+    case "account": return account();
+    case "priorities": return welcome(store.priorities);
+    case "about": return about();
+    case "club": case "join": case "clubSession": return clubPage();
+    default: return today();
+  }
+}
+window.addEventListener("hashchange", dispatch);
+dispatch();
 startSync();

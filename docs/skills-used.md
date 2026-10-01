@@ -120,6 +120,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | 39 drills checked against independent formulas (UFCF, parity, Bayes with 1,000 people, the 161/36 dice answer), the to-learn store and merge rules, lesson coverage of every new family. 76 tests. |
 | `run` (browser driving) | Home with the five sets and two locks, a typed Valuation session with "I don't know this", the Lessons card on home, the to-learn section, reading a lesson from it, Got it. |
 
+## Used for the site structure (2026-10-01)
+
+| Skill | What it was used for |
+|---|---|
+| Two web searches, not a research pass | Tab bar vs hamburger (NN/g findings as summarised by UX Collective, Onething, Uxcel) and the Duolingo tab skeleton. Enough to confirm a settled answer; no report written. |
+| `test-driven-development` | Router: parse, params, unknown routes, tab mapping. 79 tests. |
+| `run` (browser driving) | Every tab, set page, session from a set page, reload on a session, lesson route, back button, priorities save, unknown route, wide-screen rail. |
+
 ## Still to use
 
 | Skill | When |

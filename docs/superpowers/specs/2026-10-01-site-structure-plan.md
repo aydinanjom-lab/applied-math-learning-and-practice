@@ -48,3 +48,7 @@ Sessions: `#/session` (not linkable; a reload returns to Today). Club join: `#/j
 ## What this does not change
 
 The drill engine, store, sync, levels, diagnostic, and priorities stay as they are. This is a navigation change, not a logic change, and the test suite should pass untouched after steps 1 to 4.
+
+## Status (2026-10-01): steps 1 to 4 built
+
+`web/router.js` (hash routes, five tabs, tests), tab bar with a left rail above 900 px, Today / Practice / set page / Lessons (with glossary and index card as reference) / Progress (levels + starred + stats) / You (account, priorities, club placeholder, about). Sessions push `#/session` and hide the tab bar; a reload on a session returns to Today. The old footer link row is gone. Fixed on the way: the Glossary referenced an undefined `HOME_ORDER` and would have crashed. Step 5 (clubs) is next.
