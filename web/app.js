@@ -124,13 +124,16 @@ function welcome(existing = null, onDone = null) {
   };
   const step2 = () => {
     const input = el("input", { type: "date", "aria-label": "interview date", value: draft.interviewDate ?? "" });
-    input.addEventListener("change", () => { draft.interviewDate = input.value || null; });
+    const nextBtn = el("button", { class: "primary", onclick: () => { draft.interviewDate = input.value || null; step3(); } }, draft.interviewDate ? "Next" : "No date yet");
+    const sync = () => { draft.interviewDate = input.value || null; nextBtn.textContent = draft.interviewDate ? "Next" : "No date yet"; };
+    input.addEventListener("change", sync); input.addEventListener("input", sync);
     screen(
       el("h1", {}, "When is your next interview?"),
       el("p", { class: "muted" }, "Optional. Inside two weeks, the finance sets get more weight and typed mode becomes the default."),
-      input
+      input,
+      el("p", { class: "muted small" }, "Pick a date, then Next. Or skip with No date yet.")
     );
-    setBar([el("button", { onclick: step1 }, "Back"), el("button", { class: "primary", onclick: () => { draft.interviewDate = input.value || null; step3(); } }, draft.interviewDate ? "Next" : "No date yet")]);
+    setBar([el("button", { onclick: step1 }, "Back"), nextBtn]);
   };
   const step1 = () => {
     const box = (id) => el("button", { "aria-pressed": String(draft.areas.includes(id)), onclick: () => { draft.areas = draft.areas.includes(id) ? draft.areas.filter((x) => x !== id) : [...draft.areas, id]; step1(); } },
