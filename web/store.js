@@ -18,6 +18,10 @@ export class Store {
     this.feedback = null;
     this.lessonsRead = [];
     this.notes = {};
+    this.priorities = null;
+    this.stamps = {};
+    this.diagnostics = [];
+    this.checkLocks = {};
     try {
       const raw = storage.getItem(STORAGE_KEY);
       if (raw) {
@@ -34,6 +38,10 @@ export class Store {
         this.feedback = data.feedback ?? null;
         this.lessonsRead = data.lessons_read ?? [];
         this.notes = data.notes ?? {};
+        this.priorities = data.priorities ?? null;
+        this.stamps = data.stamps ?? {};
+        this.diagnostics = data.diagnostics ?? [];
+        this.checkLocks = data.check_locks ?? {};
       }
     } catch {
       // corrupt or blocked storage: start fresh, never crash a session
@@ -60,6 +68,12 @@ export class Store {
     this.bests[group] = seconds;
     return true;
   }
+  stamp(set, rung, ts = Date.now() / 1000) {
+    if (!this.stamps[set] || rung > this.stamps[set].rung) this.stamps[set] = { rung, ts };
+    else this.stamps[set].ts = ts;
+  }
+  addDiagnostic(entry) { this.diagnostics.push(entry); }
+  lockCheck(set, ts = Date.now() / 1000) { this.checkLocks[set] = ts; }
   setNote(drill, text, ts = Date.now() / 1000) {
     const clean = String(text ?? "").trim();
     if (!clean) delete this.notes[drill]; else this.notes[drill] = { text: clean, ts };
@@ -70,12 +84,13 @@ export class Store {
   markIntroShown(drill) { if (!this.introShown.includes(drill)) this.introShown.push(drill); }
 
   snapshot() {
-    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback, lessons_read: this.lessonsRead, notes: this.notes };
+    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback, lessons_read: this.lessonsRead, notes: this.notes, priorities: this.priorities, stamps: this.stamps, diagnostics: this.diagnostics, check_locks: this.checkLocks };
   }
   load(data) {
     this.attempts = data.attempts ?? []; this.stars = migrateStars(data.stars ?? {}); this.introShown = data.intro_shown ?? [];
     this.days = data.days ?? []; this.weekly = data.weekly ?? []; this.bests = data.bests ?? {}; this.unlocked = data.unlocked ?? [];
     this.goal = data.goal ?? null; this.sessions = data.sessions ?? 0; this.feedback = data.feedback ?? null; this.lessonsRead = data.lessons_read ?? []; this.notes = data.notes ?? {};
+    this.priorities = data.priorities ?? null; this.stamps = data.stamps ?? {}; this.diagnostics = data.diagnostics ?? []; this.checkLocks = data.check_locks ?? data.checkLocks ?? {};
   }
 
   save() {

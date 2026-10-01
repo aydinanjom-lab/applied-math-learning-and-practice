@@ -49,3 +49,13 @@ test("notes merge by newest timestamp per drill", () => {
                           { attempts: [], stars: {}, notes: { a: { text: "new", ts: 2 }, c: { text: "theirs", ts: 3 } } });
   assert.deepEqual(m.notes, { a: { text: "new", ts: 2 }, b: { text: "mine", ts: 5 }, c: { text: "theirs", ts: 3 } });
 });
+
+test("stamps keep the higher rung, diagnostics union by ts, priorities local-first, locks newest", () => {
+  const m = mergeProgress(
+    { attempts: [], stars: {}, stamps: { quick: { rung: 4, ts: 1 } }, diagnostics: [{ ts: 1, results: {} }], priorities: null, checkLocks: { quick: 5 } },
+    { attempts: [], stars: {}, stamps: { quick: { rung: 5, ts: 2 }, banking: { rung: 4, ts: 3 } }, diagnostics: [{ ts: 1, results: {} }, { ts: 9, results: {} }], priorities: { areas: ["poker"], minutes: 5 }, checkLocks: { quick: 3, banking: 8 } });
+  assert.deepEqual(m.stamps, { quick: { rung: 5, ts: 2 }, banking: { rung: 4, ts: 3 } });
+  assert.deepEqual(m.diagnostics.map((d) => d.ts), [1, 9]);
+  assert.deepEqual(m.priorities, { areas: ["poker"], minutes: 5 });
+  assert.deepEqual(m.checkLocks, { quick: 5, banking: 8 });
+});

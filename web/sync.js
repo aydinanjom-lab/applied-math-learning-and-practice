@@ -22,9 +22,17 @@ function mergeNotes(a, b) {
   return out;
 }
 
+function mergeStamps(a, b) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) if (!out[k] || v.rung > out[k].rung || (v.rung === out[k].rung && v.ts > out[k].ts)) out[k] = v;
+  return out;
+}
+function mergeMax(a, b) { const out = { ...a }; for (const [k, v] of Object.entries(b)) if (!(k in out) || v > out[k]) out[k] = v; return out; }
+
 export function mergeProgress(local, remote) {
-  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, ...local };
-  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, ...remote };
+  for (const side of [local, remote]) if (side && side.check_locks && !side.checkLocks) side.checkLocks = side.check_locks;
+  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, priorities: null, stamps: {}, diagnostics: [], checkLocks: {}, ...local };
+  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, priorities: null, stamps: {}, diagnostics: [], checkLocks: {}, ...remote };
   const attempts = uniqBy([...L.attempts, ...R.attempts], (a) => `${a.key}|${a.ts}`).sort((a, b) => a.ts - b.ts);
   const examples = {};
   for (const s of Object.values({ ...migrateStars(R.stars), ...migrateStars(L.stars) })) examples[s.family] = s;
@@ -43,6 +51,10 @@ export function mergeProgress(local, remote) {
     feedback: L.feedback ?? R.feedback,
     lessons_read: [...new Set([...L.lessons_read, ...R.lessons_read])],
     notes: mergeNotes(L.notes, R.notes),
+    stamps: mergeStamps(L.stamps, R.stamps),
+    diagnostics: uniqBy([...L.diagnostics, ...R.diagnostics], (d) => d.ts).sort((a, b) => a.ts - b.ts),
+    priorities: L.priorities ?? R.priorities,
+    checkLocks: mergeMax(L.checkLocks, R.checkLocks),
   };
 }
 

@@ -99,3 +99,20 @@ test("glossary notes are stored per drill with a timestamp and round-trip", () =
   const s2 = new Store(st);
   assert.deepEqual(s2.notes, { pot_odds: { text: "call / (pot + call)", ts: 300 } });
 });
+
+test("priorities, stamps, diagnostics, and check locks round-trip", () => {
+  const st = fakeStorage();
+  const s = new Store(st);
+  s.priorities = { areas: ["finance", "poker"], interviewDate: "2026-10-10", minutes: 10, when: "after breakfast" };
+  s.stamp("quick", 4, 100);
+  s.addDiagnostic({ ts: 100, results: { quick: { right: 6, total: 8 } } });
+  s.lockCheck("quick", 200);
+  s.save();
+  const s2 = new Store(st);
+  assert.deepEqual(s2.priorities, s.priorities);
+  assert.deepEqual(s2.stamps, { quick: { rung: 4, ts: 100 } });
+  assert.equal(s2.diagnostics.length, 1);
+  assert.deepEqual(s2.checkLocks, { quick: 200 });
+  s2.stamp("quick", 3, 300);
+  assert.equal(s2.stamps.quick.rung, 4, "a stamp never lowers the rung");
+});
