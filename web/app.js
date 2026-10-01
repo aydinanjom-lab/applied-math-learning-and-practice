@@ -307,7 +307,7 @@ function glossary() {
       el("h2", {}, GROUP_LABELS[g][0]),
       SET_NOTES[g] ? el("p", { class: "star small" }, SET_NOTES[g]) : null,
       el("div", { class: "stack" }, GROUPS[g].map((d) => el("div", { class: "card", style: "padding:12px 14px" },
-        el("div", { class: "titlerow" }, el("span", { class: "title" }, nice(d)), FAMILIES[d]?.method ? el("span", { class: "badge" }, "method below") : null),
+        el("div", { class: "title" }, nice(d)),
         el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
         FAMILIES[d]?.method ? el("div", { class: "small muted", style: "font-weight:400;margin-top:4px" }, el("strong", {}, "Method: "), FAMILIES[d].method) : null,
         LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => lesson(LESSON_BY_FAMILY[d], glossary) }, "Read the one-minute method") : null))),
