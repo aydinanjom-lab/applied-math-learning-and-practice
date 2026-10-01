@@ -258,15 +258,17 @@ function account() {
   }
   const input = el("input", { type: "email", inputmode: "email", autocomplete: "email", placeholder: "you@iu.edu", "aria-label": "email", required: "" });
   const status = el("p", { class: "muted small" }, "");
+  const sendBtn = el("button", { class: "primary", type: "submit" }, "Email me a sign-in link");
   screen(
     el("h1", {}, "Account"),
     el("p", {}, "Sign in to share your progress between devices. No password: you get a link by email."),
     el("form", { onsubmit: async (e) => {
       e.preventDefault();
-      status.textContent = "Sending…";
-      try { await sync.sendMagicLink(input.value.trim()); status.textContent = "Check your email and open the link on this device."; }
-      catch (err) { status.textContent = `Could not send: ${err.message ?? err}`; }
-    } }, input, el("div", { style: "height:12px" }), el("button", { class: "primary", type: "submit" }, "Email me a sign-in link")),
+      if (sendBtn.disabled) return;
+      sendBtn.disabled = true; sendBtn.textContent = "Sending…"; status.textContent = "";
+      try { await sync.sendMagicLink(input.value.trim()); status.textContent = "Check your email and open the link on this device."; sendBtn.textContent = "Sent"; }
+      catch (err) { status.textContent = `Could not send: ${err.message ?? err}`; sendBtn.disabled = false; sendBtn.textContent = "Email me a sign-in link"; }
+    } }, input, el("div", { style: "height:12px" }), sendBtn),
     status,
     el("p", { class: "muted small" }, "Progress already in this browser is kept and merged in, not replaced."),
     el("button", { class: "link", onclick: () => home() }, "Back")
