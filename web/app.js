@@ -298,11 +298,23 @@ function introScreen() {
   setBar([el("button", { class: "primary", onclick: () => { session.intros.forEach((n) => store.markIntroShown(n)); store.save(); nextItem(); } }, "Got it, start")]);
 }
 
+// A free-text note per drill, saved as you type (and synced if signed in). Your words, not the tool's.
+function noteBox(drill) {
+  const existing = store.notes[drill]?.text ?? "";
+  const ta = el("textarea", { class: "note", rows: existing ? "3" : "1", placeholder: "Your note, in your own words", "aria-label": `your note on ${nice(drill)}` });
+  ta.value = existing;
+  let timer = null;
+  ta.addEventListener("input", () => { ta.rows = Math.min(8, Math.max(ta.rows, ta.value.split("\n").length)); clearTimeout(timer); timer = setTimeout(() => { store.setNote(drill, ta.value); store.save(); saved.textContent = ta.value.trim() ? "Saved" : ""; }, 500); });
+  const saved = el("span", { class: "muted small", style: "font-weight:400" }, existing ? "Saved" : "");
+  return el("div", { class: "notewrap" }, ta, saved);
+}
+
 function glossary() {
   const sets = HOME_ORDER.filter((g) => g !== "all");
   screen(
     el("h1", {}, "Glossary"),
-    el("p", { class: "muted" }, "Every drill's one-line definition, by set. The same lines you see the first time a drill appears."),
+    el("p", { class: "muted" }, "Every drill's one-line definition, by set. The same lines you see the first time a drill appears. The box under each one is for your own note; it saves as you type."),
+    el("p", { class: "muted small" }, `${Object.keys(store.notes).length} note${Object.keys(store.notes).length === 1 ? "" : "s"} so far.`),
     ...sets.flatMap((g) => [
       el("h2", {}, GROUP_LABELS[g][0]),
       SET_NOTES[g] ? el("p", { class: "star small" }, SET_NOTES[g]) : null,
@@ -310,7 +322,8 @@ function glossary() {
         el("div", { class: "title" }, nice(d)),
         el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
         FAMILIES[d]?.method ? el("div", { class: "small muted", style: "font-weight:400;margin-top:4px" }, el("strong", {}, "Method: "), FAMILIES[d].method) : null,
-        LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => lesson(LESSON_BY_FAMILY[d], glossary) }, "Read the one-minute method") : null))),
+        LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => lesson(LESSON_BY_FAMILY[d], glossary) }, "Read the one-minute method") : null,
+        noteBox(d)))),
     ]),
     el("div", { style: "height:16px" }),
     el("button", { class: "link", onclick: () => home() }, "Back")

@@ -16,9 +16,15 @@ export function rebuildStars(attempts, examples) {
   return stars;
 }
 
+function mergeNotes(a, b) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) if (!out[k] || v.ts > out[k].ts) out[k] = v;
+  return out;
+}
+
 export function mergeProgress(local, remote) {
-  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], ...local };
-  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], ...remote };
+  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, ...local };
+  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, ...remote };
   const attempts = uniqBy([...L.attempts, ...R.attempts], (a) => `${a.key}|${a.ts}`).sort((a, b) => a.ts - b.ts);
   const examples = {};
   for (const s of Object.values({ ...migrateStars(R.stars), ...migrateStars(L.stars) })) examples[s.family] = s;
@@ -36,6 +42,7 @@ export function mergeProgress(local, remote) {
     sessions: Math.max(L.sessions, R.sessions),
     feedback: L.feedback ?? R.feedback,
     lessons_read: [...new Set([...L.lessons_read, ...R.lessons_read])],
+    notes: mergeNotes(L.notes, R.notes),
   };
 }
 

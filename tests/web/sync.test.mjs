@@ -43,3 +43,9 @@ test("bests keep the fastest, weekly dedupes by week", () => {
   assert.deepEqual(m.bests, { poker: 40, quick: 90, banking: 60 });
   assert.deepEqual(m.weekly.map((w) => w.week), ["w1", "w2"]);
 });
+
+test("notes merge by newest timestamp per drill", () => {
+  const m = mergeProgress({ attempts: [], stars: {}, notes: { a: { text: "old", ts: 1 }, b: { text: "mine", ts: 5 } } },
+                          { attempts: [], stars: {}, notes: { a: { text: "new", ts: 2 }, c: { text: "theirs", ts: 3 } } });
+  assert.deepEqual(m.notes, { a: { text: "new", ts: 2 }, b: { text: "mine", ts: 5 }, c: { text: "theirs", ts: 3 } });
+});

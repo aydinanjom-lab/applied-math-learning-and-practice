@@ -149,3 +149,6 @@ h1:focus, .prompt:focus { outline: none; }
 
 /* Dark mode: light-on-dark text looks heavier (halation), so trim the variable weight. Must come after the font shorthand above. */
 @media (prefers-color-scheme: dark) { body { font-weight: 370; } .answer { font-weight: 650; } .num { font-weight: 400; } }
+.notewrap { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+textarea.note { font: inherit; font-size: 15px; line-height: 1.4; width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--border); background: var(--surface-2); color: var(--text); resize: vertical; }
+textarea.note:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-style: solid; }

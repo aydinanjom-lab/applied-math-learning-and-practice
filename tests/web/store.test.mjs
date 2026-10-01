@@ -87,3 +87,15 @@ test("snapshot and load round-trip, and save fires onSave", () => {
   assert.deepEqual(s2.snapshot(), snap);
   assert.equal(fired, 1);
 });
+
+test("glossary notes are stored per drill with a timestamp and round-trip", () => {
+  const st = fakeStorage();
+  const s = new Store(st);
+  s.setNote("pot_odds", "call over pot plus call", 100);
+  s.setNote("pot_odds", "", 200);
+  assert.equal(s.notes.pot_odds, undefined, "empty text removes the note");
+  s.setNote("pot_odds", "  call / (pot + call)  ", 300);
+  s.save();
+  const s2 = new Store(st);
+  assert.deepEqual(s2.notes, { pot_odds: { text: "call / (pot + call)", ts: 300 } });
+});
