@@ -65,6 +65,7 @@ const KINDED = {
   multiply_shortcuts: (p) => p[1], back_of_envelope: (p) => p[1], growth_rate: (p) => p[1], combos: (p) => p[1],
   statement_direction: (p) => p[1], outs_equity: (p) => p[2], pot_odds_bet: (p) => p[1],
   contribution_margin: (p) => (p[p.length - 1] === "pct" ? "pct" : null),
+  ...Object.fromEntries(["mid_year_direction", "walk_inventory_writedown", "walk_sell_inventory", "walk_capex_cash", "walk_buyback", "leverage_turns", "irr_sensitivity_direction", "price_yield_direction", "current_yield", "call_payoff", "put_call_parity_number", "dice_ev", "flips_to_first_heads", "make_a_market", "conditional_small", "mean_variance_quick", "standard_error", "vol_sqrt_time", "sharpe_quick", "z_score", "correlation_sign"].map((d) => [d, (p) => p[1]])),
 };
 export function familyFromKey(key) {
   const p = key.split(":");

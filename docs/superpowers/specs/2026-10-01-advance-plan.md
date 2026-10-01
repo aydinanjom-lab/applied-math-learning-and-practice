@@ -40,11 +40,13 @@ Today the app is a personal tool with a public link. The four pieces turn it int
 - **Account before the diagnostic?** Clubs want the code captured on arrival; onboarding wants no email before value. Call: the code is captured from the link and held locally; sign-in is offered after the first session and the diagnostic result is merged into the account then. Nothing is lost.
 - **Content first or clubs first?** Content is cheap per set and shows up on day one for every user; clubs only matter once a club says yes. Call: priorities and diagnostic first (they change the first-run for everyone), then content, then club pieces in time for a launch date.
 
-## Status (2026-10-01): steps 1 to 3 built and deployed
+## Status (2026-10-01): steps 1 to 5 built and deployed
 
 Priorities (three-screen first run, Today session weighted by weakness and interview proximity, priority sets first with a More fold, Priorities screen, interview-date-passed card, typed default inside three days of the interview), the diagnostic (fixed form, 8 per set, 3 sets, 20-second cap, four-miss stop rule, placement to rung 3 max, 28-day re-check card), and the eight-rung level ladder with level checks, 24-hour locks, decay, and rung badges everywhere. Files: `web/priorities.js`, `web/levels.js`, `web/diagnostic.js`, plus store fields `priorities`, `stamps`, `diagnostics`, `check_locks`, all synced. 67 tests.
 
-**Where this stopped, for whoever picks it up next:** steps 4 and 5 (content: five new sets, 39 drills, specified in `advance/quant_finance_content.md`) are next and need no backend. Step 6 (clubs) needs Supabase connected first. The old per-drill five-level labels still exist in `progress.js` and feed the `weightsFor` weakness term and the per-drill column on the Levels screen; they are not shown as the headline level any more.
+Steps 4 and 5 (later the same day): the five sets from `advance/quant_finance_content.md` in `web/quant.js` (39 drills, 36 in the sets and 3 "later" ones that join Rates and options once it is Solid), 13 lessons covering every new family, a sixth priorities area "Markets and quant", unlock chain banking → deals → rates, and an "I don't know this" link on every question that stars the kind and adds it, with its lesson, to a to-learn list on the Lessons page and a card on the home screen (store field `to_learn`, synced). Deviations from the content plan: the "explain it" check for the three later drills is replaced by the Solid gate (no free-text grading exists); the HH-in-a-row variant was not built; the two-asset portfolio-vol variant is in the set from the start, with the formula in its explanation. 76 tests.
+
+**Where this stopped, for whoever picks it up next:** step 6 (clubs) is next and needs Supabase connected first (`docs/setup-sync.md`). The old per-drill five-level labels still exist in `progress.js` and feed the `weightsFor` weakness term and the per-drill column on the Levels screen; they are not shown as the headline level any more.
 
 ## 4. Build order and effort
 

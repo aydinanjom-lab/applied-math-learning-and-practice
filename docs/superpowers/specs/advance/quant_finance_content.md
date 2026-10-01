@@ -1,5 +1,7 @@
 # Napkin: next wave of quant and financial-math drills
 
+**Built 2026-10-01** in `web/quant.js` with lessons in `web/lessons.js`. See the status note in `../2026-10-01-advance-plan.md` for what differs from this plan.
+
 Plan, not code. Written Oct 1, 2026 against the 76 drills in `web/drills.js` (GROUPS: interview, poker, quick, banking, accounting, betting, moose, novyx, energy). The existing banking and accounting sets already cover EV/equity bridge, P/E and yields, WACC, CAPM, one-year discounting, the perpetuity formula, a two-year DCF, IRR from MOIC and years, debt paydown, accretion by P/E, synergies break-even, cap-table dilution, interest coverage, the depreciation question, and 14 up/down/no-change statement cases. Nothing below repeats those; several extend them.
 
 Every drill keeps the Napkin contract: situation first, one numeric or multiple-choice answer, a stated method in the explanation, solvable in under 60 seconds. Tiers: 1 = first-round freshman, 2 = superday, 3 = junior superday or quant-adjacent. "Serves" uses IB1 (IB first round), IBS (IB superday), PE, QT (quant/trading). Drills marked **later** rest on something he cannot yet derive from first principles; build them but hide them behind an unlock, as `UNLOCK_AFTER` already does for betting.

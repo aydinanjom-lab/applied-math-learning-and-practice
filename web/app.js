@@ -1,5 +1,5 @@
 // Screens: home -> session -> summary. Also interview run, weekly check, starred, stats, explain.
-import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
+import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, LATER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
 import { LESSONS, LESSON_BY_ID, LESSON_BY_FAMILY } from "./lessons.js";
 import { RUNS } from "./runs.js";
 import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } from "./priorities.js";
@@ -61,7 +61,7 @@ function countUp(node, target, format = (x) => String(Math.round(x))) {
 const CHECK = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true"); s.innerHTML = '<path d="M4 12.5 L9.5 18 L20 6.5"/>'; return s; };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
-const ALL_SETS = ["interview", "poker", "quick", "banking", "accounting", "betting", "moose", "novyx", "energy"];
+const ALL_SETS = ["interview", "poker", "quick", "banking", "accounting", "valuation", "walks", "deals", "prob", "rates", "betting", "moose", "novyx", "energy"];
 const prioritySets = () => setsForAreas(store.priorities?.areas ?? []);
 const rungOf = (set) => rungDetail(store.attempts, set, store.stamps, store.starredKeys());
 const unlockedSet = (g) => !UNLOCK_AFTER[g] || store.unlocked.includes(g) || rungOf(UNLOCK_AFTER[g]).rung >= 4;
@@ -205,6 +205,8 @@ function home(keepScroll = false) {
       el("div", { class: "title" }, "Sunday check"),
       el("p", { class: "muted small" }, "Ten typed questions from what you have started. This is the honest score."),
       el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
+    store.toLearnItems().length ? el("button", { class: "card notice action", onclick: lessonsList },
+      el("span", { class: "choice" }, el("span", { class: "title" }, `Lessons · ${store.toLearnItems().length} to learn`), el("span", { class: "muted small" }, store.toLearnItems().slice(0, 3).map((t) => (FAMILIES[t.family] ?? { name: nice(t.drill) }).name).join(" · ") + (store.toLearnItems().length > 3 ? " · more" : "")))) : null,
     el("h2", {}, "Your sets"),
     el("div", { class: "stack" }, ["today", ...pri].map(setButton)),
     el("button", { class: "link", onclick: () => { state.more = !state.more; home(true); } }, state.more ? "Fewer sets" : `More sets (${rest.length + 1})`),
@@ -274,8 +276,24 @@ function account() {
 
 
 function lessonsList() {
+  const flagged = store.toLearnItems();
+  const flaggedRow = (t) => {
+    const fam = FAMILIES[t.family] ?? { name: nice(t.drill), method: null };
+    const lessonId = t.lesson ?? LESSON_BY_FAMILY[t.family] ?? null;
+    return el("div", { class: "card", style: "margin-bottom:8px" },
+      el("div", { class: "titlerow" }, el("span", { class: "title" }, fam.name), el("button", { class: "link small", "aria-label": `got it: ${fam.name}`, onclick: () => { store.clearToLearn(t.family); store.save(); lessonsList(); } }, "Got it")),
+      el("div", { class: "muted small" }, t.example),
+      fam.method ? el("p", { class: "method", style: "margin:8px 0 0" }, el("strong", {}, "Method: "), fam.method) : null,
+      el("div", { class: "row", style: "margin-top:8px" },
+        lessonId ? el("button", { class: "primary", onclick: () => lesson(lessonId, lessonsList) }, store.lessonsRead.includes(lessonId) ? `Read again: ${LESSON_BY_ID[lessonId].title}` : `Read: ${LESSON_BY_ID[lessonId].title}`) : null,
+        el("button", { onclick: () => { const items = []; const rng = makeRng(); for (let k = 0; k < 40 && items.length < 3; k++) { const it = DRILLS[t.drill](rng, { family: t.family }); if (!items.some((x) => x.key === it.key)) items.push(it); } session = null; startSession(state.group, "type", items.length, { items, kind: "lesson" }); } }, "Try three")));
+  };
   screen(
     el("h1", {}, "Lessons"),
+    flagged.length ? el("h2", { style: "margin-top:0" }, `To learn (${flagged.length})`) : null,
+    flagged.length ? el("p", { class: "muted small" }, "Kinds of question you marked \"I don't know this\". Each clears after two clean typed reps, or tap Got it.") : null,
+    ...flagged.map(flaggedRow),
+    flagged.length ? el("h2", {}, "All lessons") : null,
     el("p", { class: "muted" }, "One minute each. Standard methods, nothing invented. Read one, then try three."),
     el("div", { class: "stack" }, LESSONS.map((l) => el("button", { onclick: () => lesson(l.id, lessonsList) },
       el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, l.title), store.lessonsRead.includes(l.id) ? el("span", { class: "badge l3" }, "read") : null), el("span", { class: "muted small" }, l.method))))),
@@ -339,7 +357,9 @@ let session = null;
 
 function startSession(group, mode, count, opts = {}) {
   const pri = prioritySets();
-  const names = group === "today" ? pri.flatMap((s) => GROUPS[s]) : GROUPS[group];
+  // "Later" drills join a set once it is Solid: they rest on a derivation worth earning first.
+  const withLater = (g) => (LATER[g] && rungOf(g).rung >= 4 ? [...GROUPS[g], ...LATER[g]] : GROUPS[g]);
+  const names = group === "today" ? pri.flatMap((s) => GROUPS[s]) : withLater(group);
   const urgent = daysUntil(store.priorities?.interviewDate ?? null);
   if (group === "today" && mode === "say" && urgent !== null && urgent >= 0 && urgent <= 3 && !opts.items) mode = "type";
   const items = opts.items ?? (group === "today" ? todayQueue(store, pri, count, weightsFor(store, pri, store.priorities?.interviewDate ?? null), makeRng()) : buildQueue(store, names, count, makeRng()));
@@ -404,6 +424,13 @@ function header() {
     el("div", { class: "progress", role: "progressbar", "aria-valuenow": String(session.i), "aria-valuemin": "0", "aria-valuemax": String(session.items.length), "aria-label": "session progress" }, ...segs)];
 }
 
+const DONT_KNOW = "(don't know)";
+function dontKnow(item, secs) {
+  store.flagToLearn(item, LESSON_BY_FAMILY[familyOf(item)] ?? null);
+  grade(item, false, secs, DONT_KNOW);
+}
+const dontKnowRow = (item, seconds) => (session.kind === "check" ? null : el("div", { class: "dontknow" }, el("button", { class: "link small", onclick: () => dontKnow(item, seconds()) }, "I don't know this")));
+
 let diagTimer = null;
 function nextItem() {
   clearTimeout(diagTimer);
@@ -429,14 +456,14 @@ function nextItem() {
         el("button", { class: "miss", onclick: () => grade(item, false, secs) }, "✗ No, missed it"))], true);
       keys({ y: () => grade(item, true, secs), n: () => grade(item, false, secs) });
     };
-    screen(header(), promptEl(item), el("p", { class: "muted" }, "Say the answer out loud, then reveal."), keysOn() ? el("p", { class: "muted small kbd-hint" }, "Enter to reveal · Y or N to grade") : null);
+    screen(header(), promptEl(item), el("p", { class: "muted" }, "Say the answer out loud, then reveal."), keysOn() ? el("p", { class: "muted small kbd-hint" }, "Enter to reveal · Y or N to grade") : null, dontKnowRow(item, seconds));
     setBar([el("button", { class: "primary", onclick: reveal, autofocus: "" }, "Reveal")]);
     keys({ Enter: reveal, " ": reveal });
     return;
   }
 
   if (item.choices) {
-    screen(header(), promptEl(item), el("p", { class: "muted" }, "Pick one."));
+    screen(header(), promptEl(item), el("p", { class: "muted" }, "Pick one."), dontKnowRow(item, seconds));
     setBar(item.choices.map((c, idx) => el("button", { class: "primary", onclick: () => grade(item, isCorrect(item, idx), seconds(), c) }, c)));
     keys({});
     return;
@@ -453,7 +480,8 @@ function nextItem() {
   };
   const minus = el("button", { type: "button", "aria-label": "toggle negative", onclick: () => { input.value = input.value.startsWith("-") ? input.value.slice(1) : "-" + input.value; input.focus(); } }, "±");
   screen(header(), promptEl(item),
-    el("form", { id: "ansform", onsubmit: (e) => { e.preventDefault(); submit(); } }, el("div", { class: "inputrow" }, input, minus)));
+    el("form", { id: "ansform", onsubmit: (e) => { e.preventDefault(); submit(); } }, el("div", { class: "inputrow" }, input, minus)),
+    dontKnowRow(item, seconds));
   setBar([el("button", { class: "primary", type: "submit", form: "ansform" }, "Check")]);
   input.focus();
   keys({});
@@ -477,12 +505,14 @@ function grade(item, correct, secs, typed) {
   const fam = FAMILIES[family] ?? { name: nice(item.drill), method: null };
   const lessonId = LESSON_BY_FAMILY[family];
   const status = cleared ? el("p", { class: "star" }, `Star cleared: ${fam.name}. Two clean reps in a row.`)
+    : typed === DONT_KNOW ? el("p", { class: "star" }, `Added to Lessons: ${fam.name}. Starred too, so it comes back with new numbers.`)
     : !correct ? el("p", { class: "star" }, `Starred: ${fam.name}. Comes back with new numbers until you get two in a row.`) : null;
   const next = () => { session.i += 1; nextItem(); };
   if (session.kind === "diag" || session.kind === "check") {
     session.results.push(attempt);
     screen(header(), promptEl(item),
-      el("div", { class: `mark ${correct ? "ok" : "miss"}` }, correct ? CHECK() : "✗ ", `${correct ? "Correct" : typed === "(time)" ? "Out of time" : "Missed"} · ${secs.toFixed(1)}s`),
+      el("div", { class: `mark ${correct ? "ok" : "miss"}` }, correct ? CHECK() : "✗ ", `${correct ? "Correct" : typed === "(time)" ? "Out of time" : typed === DONT_KNOW ? "Don't know" : "Missed"} · ${secs.toFixed(1)}s`),
+      typed === DONT_KNOW ? el("p", { class: "star" }, `Added to Lessons: ${(FAMILIES[familyOf(item)] ?? { name: nice(item.drill) }).name}.`) : null,
       el("div", { class: "answer num" }, display(item)),
       el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")));
     setBar([el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish")], true, correct ? "ok" : "miss");
@@ -499,8 +529,8 @@ function grade(item, correct, secs, typed) {
   screen(
     header(),
     promptEl(item),
-    el("div", { class: `mark ${correct ? "ok" : "miss"}` }, correct ? CHECK() : "✗ ", `${correct ? "Correct" : "Missed"} · ${secs.toFixed(1)}s`),
-    typed !== undefined && !correct ? el("p", { class: "muted small" }, `You answered ${typed}.`) : null,
+    el("div", { class: `mark ${correct ? "ok" : "miss"}` }, correct ? CHECK() : "✗ ", `${correct ? "Correct" : typed === DONT_KNOW ? "Don't know" : "Missed"} · ${secs.toFixed(1)}s`),
+    typed !== undefined && !correct && typed !== DONT_KNOW ? el("p", { class: "muted small" }, `You answered ${typed}.`) : null,
     el("div", { class: "answer num" }, display(item)),
     el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
     fam.method ? el("p", { class: "method" + (correct ? " quiet" : "") }, el("strong", {}, "Method: "), fam.method) : null,

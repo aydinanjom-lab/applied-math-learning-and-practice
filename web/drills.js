@@ -6,6 +6,7 @@ import { FAMILIES } from "./families.js";
 import * as interview from "./interview.js";
 import * as finance from "./finance.js";
 import * as quick2 from "./quick2.js";
+import * as quant from "./quant.js";
 export { makeRng, fmt, parseAnswer, isCorrect, familyOf, familyFromKey, FAMILIES };
 
 // ======================= poker =======================
@@ -481,7 +482,7 @@ export const DRILLS = {
   rebooking_revenue, unrealized_revenue, rate_card, pipeline_revenue, lifetime_value,
   american_to_prob, decimal_to_prob, fraction_to_decimal_odds, remove_vig, bet_ev, kelly,
   oil_revenue, netback, decline, reserve_life, breakeven_price,
-  ...interview, ...finance, ...quick2,
+  ...interview, ...finance, ...quick2, ...quant,
 };
 
 export const GROUPS = {
@@ -494,7 +495,14 @@ export const GROUPS = {
   moose: ["contribution_margin", "payback_months", "break_even_units", "discount_trap", "roas_to_return", "customer_value"],
   novyx: ["rebooking_revenue", "unrealized_revenue", "rate_card", "pipeline_revenue", "lifetime_value"],
   energy: ["oil_revenue", "netback", "decline", "reserve_life", "breakeven_price"],
+  valuation: ["ufcf", "tv_exit_multiple", "tv_perpetuity_vs_exit", "implied_growth", "mid_year_direction", "comps_implied_ev", "multiple_translate", "pe_from_ev_ebitda"],
+  walks: ["walk_depreciation_cash", "walk_inventory_writedown", "walk_sell_inventory", "walk_capex_cash", "walk_debt_raise", "walk_buyback"],
+  deals: ["sources_uses_equity", "leverage_turns", "cash_sweep_year", "moic_from_irr", "exit_multiple_breakeven", "irr_sensitivity_direction", "value_creation_split"],
+  rates: ["price_yield_direction", "current_yield", "call_payoff"],
+  prob: ["dice_ev", "flips_to_first_heads", "make_a_market", "conditional_small", "bayes_100", "mean_variance_quick", "standard_error", "vol_sqrt_time", "sharpe_quick", "z_score", "correlation_sign", "market_size_steps"],
 };
+// Drills that join a set only once it is Solid: they rest on a derivation (duration as a derivative, parity, delta) worth earning first.
+export const LATER = { rates: ["duration_price_change", "put_call_parity_number", "delta_hedge_shares"] };
 GROUPS.all = Object.values(GROUPS).flat().filter((v, i, a) => a.indexOf(v) === i);
 
 // Home-screen order, label, and one-line subtitle.
@@ -508,13 +516,57 @@ export const GROUP_LABELS = {
   moose: ["Mighty Moose numbers", "Margin, payback, break-even, the discount trap, ad returns"],
   novyx: ["Novyx numbers", "Rebooking, revenue gaps, rate cards, pipeline, customer value"],
   energy: ["Houston energy basics", "Barrels, netback, decline, reserve life, break-even price"],
+  valuation: ["Valuation pieces", "Free cash flow, the two terminal values, mid-year, comps, implied share price"],
+  walks: ["Accounting walks", "One event, three statements, one number at the end"],
+  deals: ["Deal math", "Sources and uses, debt tranches, the sweep, IRR shortcuts, what moves returns"],
+  rates: ["Rates and options", "Bonds the fast way, option payoffs, parity as a number, delta as shares"],
+  prob: ["Probability and statistics", "Dice, coins, Bayes with 1,000 people, standard error, square root of time, Fermi"],
   all: ["Everything", "All sets mixed"],
 };
 
 // A set unlocks when the one before it is Solid on every drill. Override allowed.
-export const UNLOCK_AFTER = { betting: "poker" };
+export const UNLOCK_AFTER = { betting: "poker", deals: "banking", rates: "deals" };
 
 export const DEFINITIONS = {
+  ufcf: "Unlevered free cash flow: EBIT x (1 - tax) + D&A - capex - increase in working capital. The cash a DCF discounts.",
+  tv_exit_multiple: "Terminal value by exit multiple: final-year EBITDA times the multiple peers trade at.",
+  tv_perpetuity_vs_exit: "Terminal value by perpetuity: final cash flow x (1 + g) / (rate - g). Cross-check it against the exit-multiple number.",
+  implied_growth: "Implied growth: the long-run growth rate an exit multiple assumes. g = (TV x r - FCF) / (TV + FCF).",
+  mid_year_direction: "Mid-year convention: discount each year's cash by half a year less, because cash arrives through the year.",
+  comps_implied_ev: "Comps chain: peer multiple x target EBITDA = EV; minus net debt = equity; divided by shares = price.",
+  multiple_translate: "Translating multiples: EV/EBITDA = (EV/Revenue) / EBITDA margin.",
+  pe_from_ev_ebitda: "From EV multiple to P/E: EV minus net debt is equity value; divide by net income.",
+  walk_depreciation_cash: "The depreciation walk: more depreciation cuts net income by the after-tax amount and raises cash by the tax saved.",
+  walk_inventory_writedown: "Inventory write-down: a non-cash expense. Equity falls after tax, cash rises by the tax saved.",
+  walk_sell_inventory: "Selling inventory for cash: net income rises by the after-tax profit; cash rises by the sale minus tax (the inventory was paid for earlier).",
+  walk_capex_cash: "Capex walk: the purchase hits cash now; only depreciation hits net income, a year at a time.",
+  walk_debt_raise: "Raising debt: cash up by the amount, less the after-tax interest in year one. Net income down by the after-tax interest.",
+  walk_buyback: "Buyback: cash down, equity down, net income unchanged, share count down, so EPS up.",
+  sources_uses_equity: "Sources and uses: uses are price plus fees; sources are debt plus the equity check, which is the plug.",
+  leverage_turns: "Turns of leverage: debt as a multiple of EBITDA. Blended rate weights each tranche by its size.",
+  cash_sweep_year: "Cash sweep: a share of spare cash goes straight to repaying debt each year.",
+  moic_from_irr: "MOIC from IRR: (1 + IRR) to the power of years. 2x in 5 years is about 15%, 3x about 25%.",
+  exit_multiple_breakeven: "Break-even exit multiple: entry EV divided by exit EBITDA. Below it, multiple compression eats the growth.",
+  irr_sensitivity_direction: "IRR drivers: EBITDA growth, debt paydown, exit multiple, and how early the cash comes back.",
+  value_creation_split: "Returns attribution: equity gain = EBITDA growth + debt paydown + multiple expansion. Solve for the missing piece.",
+  price_yield_direction: "Price and yield move opposite ways. Longer maturity and lower coupon mean a bigger price move.",
+  current_yield: "Current yield: coupon / price. Yield to maturity also counts the pull back to 100 at maturity.",
+  duration_price_change: "Duration: price change in percent is about minus duration times the yield change in percent.",
+  call_payoff: "Option payoff at expiry: call pays max(stock - strike, 0), put pays max(strike - stock, 0). Subtract the premium for profit.",
+  put_call_parity_number: "Put-call parity: call - put = stock - PV(strike). Use it to back out the present value of the strike.",
+  delta_hedge_shares: "Delta hedge: contracts x 100 x delta is the share exposure. Sell that many shares to be flat.",
+  dice_ev: "Fair price of a game: the expected payout. Averages add; for independent things, averages multiply.",
+  flips_to_first_heads: "Expected tries to the first success: 1 / p. Coin: 2 flips. Die for a six: 6 rolls.",
+  make_a_market: "Make a market: quote a bid below fair value and an offer above it. Know fair value first.",
+  conditional_small: "Conditional probability by counting: list the outcomes that fit the condition, then count the ones you want.",
+  bayes_100: "Bayes with a crowd: picture 1,000 people, count true and false positives, divide.",
+  mean_variance_quick: "Mean is the average. Population variance is the average squared distance from the mean; its square root is the standard deviation.",
+  standard_error: "Standard error of the mean: sd / sqrt(n). Mean / SE is the t-statistic; 2 is the usual bar.",
+  vol_sqrt_time: "Volatility scales with the square root of time: daily x sqrt(252), monthly x sqrt(12).",
+  sharpe_quick: "Sharpe ratio: (return - risk-free) / volatility. Annualise a monthly Sharpe by sqrt(12).",
+  z_score: "Z-score: (observation - mean) / sd. One-sided tails: 1 sd 16%, 2 sd 2.5%, 3 sd 0.15%.",
+  correlation_sign: "Correlation: -1 to 1, whether two things move together. Equal-weight portfolio vol = vol x sqrt((1 + correlation) / 2).",
+  market_size_steps: "Market sizing: chain the givens, one step at a time, and say which assumption is weakest.",
   pot_odds: "Pot odds: the share of the final pot your call is. Call / (pot + call) is the win rate you need to break even.",
   pot_odds_bet: "When the pot is stated before the bet, the number is bet / (pot + 2 x bet). Half-pot needs 25%, full pot 33%.",
   bluff_break_even: "A bluff breaks even when they fold bet / (pot + bet) of the time. Pot odds from the bettor's side.",

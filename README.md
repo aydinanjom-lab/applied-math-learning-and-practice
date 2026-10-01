@@ -30,12 +30,14 @@ then open http://localhost:8000 in a browser.
 
 **First visit:** three quick screens (what you are here for, an optional interview date, minutes per day), then an optional six-minute typed check that places you per set and stars what you miss. Your "Today" session draws from your priority sets, weighted to where you are weak and how close the interview is. Change priorities any time from the home screen. **Install:** on a phone, Add to Home Screen gives an icon and offline start.
 
-**What's on the page:** nine drill sets (interview, poker, quick math, banking interview numbers, accounting interview numbers,
-sports betting math, Mighty Moose numbers, Novyx numbers, Houston energy basics), 76 drills in all, plus 18 one-minute
-lessons on the standard mental-math methods, each with a "Try three" button, an Interview run (the FIR question, three typed answers,
+**What's on the page:** fourteen drill sets (interview, poker, quick math, banking interview numbers, accounting interview numbers,
+valuation pieces, accounting walks, deal math, rates and options, probability and statistics, sports betting math, Mighty Moose
+numbers, Novyx numbers, Houston energy basics), 115 drills in all, plus 31 one-minute lessons on the standard methods, each with a
+"Try three" button. Every question has an "I don't know this" link: it marks the question wrong, stars that kind of question, and
+adds the topic with its lesson to a Lessons card on the home screen, where it stays until two clean typed reps or you tap Got it. an Interview run (the FIR question, three typed answers,
 90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), three interview runs (poker, finance, accounting), an eight-rung level per set from typed
 answers only (Unplaced to Cold; the top four rungs need a passed ten-question level check and decay if you stop practising), a daily streak with one free skip a week, and personal bests. Sports
-betting math unlocks once poker is Solid on every drill, with an "unlock anyway" link. The betting set is math practice
+betting math unlocks once poker is Solid, deal math once banking is Solid, and rates and options once deal math is Solid, each with an "unlock anyway" link. Three rates drills (duration, put-call parity, delta hedging) join their set only once it is Solid. The betting set is math practice
 only: odds are generated, and nothing is ever recorded as a bet.
 
 **Your data:** saved inside the browser you use, no trackers. Export from the Stats page. **Sync between devices** is optional and off until you connect a free Supabase project (about five minutes, see `docs/setup-sync.md`). Then Account on the home screen signs you in by an emailed link, and your laptop and phone share one record. Your laptop and your phone each keep their own

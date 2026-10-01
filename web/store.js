@@ -22,6 +22,7 @@ export class Store {
     this.stamps = {};
     this.diagnostics = [];
     this.checkLocks = {};
+    this.toLearn = {};
     try {
       const raw = storage.getItem(STORAGE_KEY);
       if (raw) {
@@ -42,6 +43,7 @@ export class Store {
         this.stamps = data.stamps ?? {};
         this.diagnostics = data.diagnostics ?? [];
         this.checkLocks = data.check_locks ?? {};
+        this.toLearn = data.to_learn ?? {};
       }
     } catch {
       // corrupt or blocked storage: start fresh, never crash a session
@@ -55,9 +57,17 @@ export class Store {
       this.stars[family] = { family, drill: item.drill, example: item.prompt, streak: 0 };
     } else if (this.stars[family]) {
       this.stars[family].streak += 1;
-      if (this.stars[family].streak >= CLEAR_AFTER) delete this.stars[family];
+      if (this.stars[family].streak >= CLEAR_AFTER) { delete this.stars[family]; delete this.toLearn[family]; }
     }
   }
+
+  // "I don't know this": the kind of question joins the to-learn list until two clean reps or the user clears it.
+  flagToLearn(item, lesson, ts = Date.now() / 1000) {
+    const family = familyOf(item);
+    this.toLearn[family] = { family, drill: item.drill, example: item.prompt, lesson: lesson ?? null, ts };
+  }
+  clearToLearn(family) { delete this.toLearn[family]; }
+  toLearnItems() { return Object.values(this.toLearn).sort((a, b) => b.ts - a.ts); }
 
   starredItems() { return Object.values(this.stars); }
   starredKeys() { return Object.keys(this.stars); }
@@ -84,13 +94,14 @@ export class Store {
   markIntroShown(drill) { if (!this.introShown.includes(drill)) this.introShown.push(drill); }
 
   snapshot() {
-    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback, lessons_read: this.lessonsRead, notes: this.notes, priorities: this.priorities, stamps: this.stamps, diagnostics: this.diagnostics, check_locks: this.checkLocks };
+    return { attempts: this.attempts, stars: this.stars, intro_shown: this.introShown, days: this.days, weekly: this.weekly, bests: this.bests, unlocked: this.unlocked, goal: this.goal, sessions: this.sessions, feedback: this.feedback, lessons_read: this.lessonsRead, notes: this.notes, priorities: this.priorities, stamps: this.stamps, diagnostics: this.diagnostics, check_locks: this.checkLocks, to_learn: this.toLearn };
   }
   load(data) {
     this.attempts = data.attempts ?? []; this.stars = migrateStars(data.stars ?? {}); this.introShown = data.intro_shown ?? [];
     this.days = data.days ?? []; this.weekly = data.weekly ?? []; this.bests = data.bests ?? {}; this.unlocked = data.unlocked ?? [];
     this.goal = data.goal ?? null; this.sessions = data.sessions ?? 0; this.feedback = data.feedback ?? null; this.lessonsRead = data.lessons_read ?? []; this.notes = data.notes ?? {};
     this.priorities = data.priorities ?? null; this.stamps = data.stamps ?? {}; this.diagnostics = data.diagnostics ?? []; this.checkLocks = data.check_locks ?? data.checkLocks ?? {};
+    this.toLearn = data.to_learn ?? {};
   }
 
   save() {

@@ -6,16 +6,16 @@ import { makeRng, GROUPS } from "../../web/drills.js";
 
 const fakeStorage = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
 
-test("five areas cover every set exactly once except 'all'", () => {
+test("six areas cover every set exactly once except 'all'", () => {
   const covered = Object.values(AREAS).flatMap((a) => a.sets);
   const expected = Object.keys(GROUPS).filter((g) => g !== "all");
   assert.deepEqual([...covered].sort(), expected.sort());
-  assert.equal(Object.keys(AREAS).length, 5);
+  assert.equal(Object.keys(AREAS).length, 6);
   for (const a of Object.values(AREAS)) assert.ok(a.title && a.sub);
 });
 
 test("setsForAreas keeps area order and falls back to interview", () => {
-  assert.deepEqual(setsForAreas(["finance", "poker"]), ["banking", "accounting", "interview", "poker"]);
+  assert.deepEqual(setsForAreas(["finance", "poker"]), ["banking", "accounting", "valuation", "walks", "deals", "interview", "poker"]);
   assert.deepEqual(setsForAreas([]), ["interview"]);
 });
 

@@ -17,7 +17,8 @@ test("registry: groups, definitions, answer-format line on every prompt", () => 
   for (const name of Object.keys(DRILLS)) {
     assert.ok(DEFINITIONS[name] && !DEFINITIONS[name].includes("\n"), name);
     for (const it of items(name, 20)) {
-      assert.match(it.prompt, /Answer (in|with)|Call or fold|Accretive or dilutive|no change\?/, `${name}: ${it.prompt}`);
+      if (!it.choices) assert.match(it.prompt, /Answer (in|with)|Call or fold/, `${name}: ${it.prompt}`);
+      else assert.ok(it.choices.length >= 2 && Number.isInteger(it.answer) && it.answer < it.choices.length, `${name}: ${it.prompt}`);
       if (GROUPS.poker.includes(name)) assert.ok(!/equity|\bEV\b/i.test(it.prompt), `jargon in ${name}: ${it.prompt}`);
     }
   }

@@ -50,6 +50,12 @@ test("notes merge by newest timestamp per drill", () => {
   assert.deepEqual(m.notes, { a: { text: "new", ts: 2 }, b: { text: "mine", ts: 5 }, c: { text: "theirs", ts: 3 } });
 });
 
+test("to-learn flags merge by newest timestamp per family", () => {
+  const m = mergeProgress({ attempts: [], stars: {}, to_learn: { ufcf: { family: "ufcf", ts: 1 } } }, { attempts: [], stars: {}, to_learn: { ufcf: { family: "ufcf", ts: 2, lesson: "ufcf_build" }, bayes_100: { family: "bayes_100", ts: 1 } } });
+  assert.deepEqual(Object.keys(m.to_learn).sort(), ["bayes_100", "ufcf"]);
+  assert.equal(m.to_learn.ufcf.lesson, "ufcf_build");
+});
+
 test("stamps keep the higher rung, diagnostics union by ts, priorities local-first, locks newest", () => {
   const m = mergeProgress(
     { attempts: [], stars: {}, stamps: { quick: { rung: 4, ts: 1 } }, diagnostics: [{ ts: 1, results: {} }], priorities: null, checkLocks: { quick: 5 } },

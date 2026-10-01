@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { DRILLS, makeRng } from "../../web/drills.js";
 import { Store } from "../../web/store.js";
 
 const fakeStorage = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
@@ -98,6 +99,24 @@ test("glossary notes are stored per drill with a timestamp and round-trip", () =
   s.save();
   const s2 = new Store(st);
   assert.deepEqual(s2.notes, { pot_odds: { text: "call / (pot + call)", ts: 300 } });
+});
+
+test("don't-know flags a family to learn, clears on two clean reps or by hand, and round-trips", () => {
+  const st = fakeStorage();
+  const s = new Store(st);
+  const rng = makeRng(2);
+  const a = DRILLS.ufcf(rng), b = DRILLS.ufcf(rng), c = DRILLS.ufcf(rng);
+  s.flagToLearn(a, "ufcf_build", 100);
+  assert.deepEqual(s.toLearnItems().map((x) => [x.family, x.lesson]), [["ufcf", "ufcf_build"]]);
+  s.record(a, { key: a.key, drill: a.drill, correct: false, seconds: 9, mode: "type", ts: 100 });
+  s.save();
+  assert.ok(new Store(st).toLearn.ufcf, "persists");
+  s.record(b, { key: b.key, drill: b.drill, correct: true, seconds: 9, mode: "type", ts: 101 });
+  assert.ok(s.toLearn.ufcf, "one clean rep is not enough");
+  s.record(c, { key: c.key, drill: c.drill, correct: true, seconds: 9, mode: "type", ts: 102 });
+  assert.equal(s.toLearn.ufcf, undefined, "two clean reps clear it with the star");
+  s.flagToLearn(a, null, 200); s.clearToLearn("ufcf");
+  assert.deepEqual(s.toLearn, {});
 });
 
 test("priorities, stamps, diagnostics, and check locks round-trip", () => {

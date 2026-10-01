@@ -3,14 +3,15 @@ import { GROUPS, DRILLS } from "./drills.js";
 import { masteryLevel } from "./progress.js";
 
 export const AREAS = {
-  finance: { title: "Finance interview numbers", sub: "Valuation, cost of capital, buyouts, the three statements.", sets: ["banking", "accounting"] },
+  finance: { title: "Finance interview numbers", sub: "Valuation, cost of capital, buyouts, the three statements, deal math.", sets: ["banking", "accounting", "valuation", "walks", "deals"] },
   poker: { title: "Poker as an interview answer", sub: "Pot odds, outs, bet sizing, call or fold.", sets: ["interview", "poker"] },
   quick: { title: "Fast mental math", sub: "Percent tricks, fast multiplying and dividing, fractions.", sets: ["quick"] },
   business: { title: "My business numbers", sub: "Margins, payback, break-even, pipeline.", sets: ["moose", "novyx"] },
   energyodds: { title: "Energy and odds", sub: "Barrels and netbacks; odds formats and fair chance, math only.", sets: ["energy", "betting"] },
+  markets: { title: "Markets and quant", sub: "Bonds, options, dice and coins, Bayes, volatility, Sharpe, market sizing.", sets: ["prob", "rates"] },
 };
-export const AREA_ORDER = ["finance", "poker", "quick", "business", "energyodds"];
-const INTERVIEW_SETS = new Set(["banking", "accounting", "interview"]);
+export const AREA_ORDER = ["finance", "poker", "quick", "business", "markets", "energyodds"];
+const INTERVIEW_SETS = new Set(["banking", "accounting", "interview", "valuation", "walks"]);
 
 export function setsForAreas(areas) {
   const sets = (areas ?? []).flatMap((a) => AREAS[a]?.sets ?? []);

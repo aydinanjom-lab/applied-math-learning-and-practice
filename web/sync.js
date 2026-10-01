@@ -31,8 +31,8 @@ function mergeMax(a, b) { const out = { ...a }; for (const [k, v] of Object.entr
 
 export function mergeProgress(local, remote) {
   for (const side of [local, remote]) if (side && side.check_locks && !side.checkLocks) side.checkLocks = side.check_locks;
-  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, priorities: null, stamps: {}, diagnostics: [], checkLocks: {}, ...local };
-  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, priorities: null, stamps: {}, diagnostics: [], checkLocks: {}, ...remote };
+  const L = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, priorities: null, stamps: {}, diagnostics: [], checkLocks: {}, to_learn: {}, ...local };
+  const R = { attempts: [], stars: {}, days: [], weekly: [], bests: {}, unlocked: [], intro_shown: [], goal: null, sessions: 0, feedback: null, lessons_read: [], notes: {}, priorities: null, stamps: {}, diagnostics: [], checkLocks: {}, to_learn: {}, ...remote };
   const attempts = uniqBy([...L.attempts, ...R.attempts], (a) => `${a.key}|${a.ts}`).sort((a, b) => a.ts - b.ts);
   const examples = {};
   for (const s of Object.values({ ...migrateStars(R.stars), ...migrateStars(L.stars) })) examples[s.family] = s;
@@ -55,6 +55,7 @@ export function mergeProgress(local, remote) {
     diagnostics: uniqBy([...L.diagnostics, ...R.diagnostics], (d) => d.ts).sort((a, b) => a.ts - b.ts),
     priorities: L.priorities ?? R.priorities,
     checkLocks: mergeMax(L.checkLocks, R.checkLocks),
+    to_learn: mergeNotes(L.to_learn, R.to_learn),
   };
 }
 

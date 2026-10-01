@@ -113,6 +113,13 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | Priorities weighting and Today queue, eight-rung ladder with decay and checks, diagnostic builder and placement, store fields and merge rules: tests first. 67 tests. |
 | `run` (browser driving) | Full first run: three screens, diagnostic with stop rule, placement screen, home with Today and More, Levels screen, Priorities edit, a seeded Solid level check pass. |
 
+## Used for the quant and financial-math sets (2026-10-01)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | 39 drills checked against independent formulas (UFCF, parity, Bayes with 1,000 people, the 161/36 dice answer), the to-learn store and merge rules, lesson coverage of every new family. 76 tests. |
+| `run` (browser driving) | Home with the five sets and two locks, a typed Valuation session with "I don't know this", the Lessons card on home, the to-learn section, reading a lesson from it, Got it. |
+
 ## Still to use
 
 | Skill | When |

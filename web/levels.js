@@ -5,6 +5,7 @@ export const RUNGS = ["Unplaced", "Started", "Learning", "Mostly right", "Solid"
 export const SPEED = {
   quick: { quick: 8, fast: 5 }, interview: { quick: 12, fast: 8 }, poker: { quick: 12, fast: 8 }, betting: { quick: 15, fast: 10 },
   banking: { quick: 20, fast: 12 }, accounting: { quick: 20, fast: 12 }, moose: { quick: 20, fast: 12 }, novyx: { quick: 20, fast: 12 }, energy: { quick: 20, fast: 12 },
+  valuation: { quick: 25, fast: 15 }, walks: { quick: 25, fast: 15 }, deals: { quick: 25, fast: 15 }, rates: { quick: 15, fast: 10 }, prob: { quick: 20, fast: 12 },
 };
 const PROOF_MODES = new Set(["type", "diag", "check"]);
 const WINDOW_DAYS = 90;
