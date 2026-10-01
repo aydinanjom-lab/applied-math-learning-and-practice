@@ -50,7 +50,9 @@ function proofRung(rows, set, starredKeys) {
 
 export function rungDetail(attempts, set, stamps, starredKeys, now = Date.now() / 1000) {
   const rows = recentTyped(attempts, set, now).sort((a, b) => a.ts - b.ts);
-  const data = dataRung(rows, set);
+  let data = dataRung(rows, set);
+  const placement = stamps[set];
+  if (placement && placement.rung < 4 && now - placement.ts < 28 * 86400) data = Math.max(data, placement.rung);
   const lastTs = rows.length ? rows[rows.length - 1].ts : null;
   const daysSince = lastTs ? (now - lastTs) / 86400 : 0;
   const stamp = stamps[set];

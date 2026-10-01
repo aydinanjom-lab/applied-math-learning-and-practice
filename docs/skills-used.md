@@ -106,6 +106,13 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `brainstorming` | The synthesis: decisions, disagreements resolved, build order, refused list. |
 | `test-driven-development` | Glossary notes: store and merge rules tested before the textareas were added. 50 tests. |
 
+## Used for the priorities, diagnostic, and levels release (2026-10-01)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | Priorities weighting and Today queue, eight-rung ladder with decay and checks, diagnostic builder and placement, store fields and merge rules: tests first. 67 tests. |
+| `run` (browser driving) | Full first run: three screens, diagnostic with stop rule, placement screen, home with Today and More, Levels screen, Priorities edit, a seeded Solid level check pass. |
+
 ## Still to use
 
 | Skill | When |

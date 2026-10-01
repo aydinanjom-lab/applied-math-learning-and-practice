@@ -40,6 +40,12 @@ Today the app is a personal tool with a public link. The four pieces turn it int
 - **Account before the diagnostic?** Clubs want the code captured on arrival; onboarding wants no email before value. Call: the code is captured from the link and held locally; sign-in is offered after the first session and the diagnostic result is merged into the account then. Nothing is lost.
 - **Content first or clubs first?** Content is cheap per set and shows up on day one for every user; clubs only matter once a club says yes. Call: priorities and diagnostic first (they change the first-run for everyone), then content, then club pieces in time for a launch date.
 
+## Status (2026-10-01): steps 1 to 3 built and deployed
+
+Priorities (three-screen first run, Today session weighted by weakness and interview proximity, priority sets first with a More fold, Priorities screen, interview-date-passed card, typed default inside three days of the interview), the diagnostic (fixed form, 8 per set, 3 sets, 20-second cap, four-miss stop rule, placement to rung 3 max, 28-day re-check card), and the eight-rung level ladder with level checks, 24-hour locks, decay, and rung badges everywhere. Files: `web/priorities.js`, `web/levels.js`, `web/diagnostic.js`, plus store fields `priorities`, `stamps`, `diagnostics`, `check_locks`, all synced. 67 tests.
+
+**Where this stopped, for whoever picks it up next:** steps 4 and 5 (content: five new sets, 39 drills, specified in `advance/quant_finance_content.md`) are next and need no backend. Step 6 (clubs) needs Supabase connected first. The old per-drill five-level labels still exist in `progress.js` and feed the `weightsFor` weakness term and the per-drill column on the Levels screen; they are not shown as the headline level any more.
+
 ## 4. Build order and effort
 
 | Step | What | Evenings |

@@ -2,6 +2,9 @@
 import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
 import { LESSONS, LESSON_BY_ID, LESSON_BY_FAMILY } from "./lessons.js";
 import { RUNS } from "./runs.js";
+import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } from "./priorities.js";
+import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLevelCheck } from "./levels.js";
+import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store } from "./store.js";
 import { SyncClient, mergeProgress } from "./sync.js";
 import { SUPABASE } from "./config.js";
@@ -44,7 +47,7 @@ async function startSync() {
   } catch (e) { syncState.error = e.message ?? String(e); }
 }
 const saved = (() => { try { return JSON.parse(localStorage.getItem("napkin_state") || "{}"); } catch { return {}; } })();
-const state = { group: saved.group ?? "interview", mode: saved.mode ?? "say", count: saved.count ?? 10 };
+const state = { group: saved.group ?? "today", mode: saved.mode ?? "say", count: saved.count ?? 10, more: false };
 const remember = () => { try { localStorage.setItem("napkin_state", JSON.stringify(state)); } catch {} };
 const keysOn = () => { try { return localStorage.getItem("napkin_keys") !== "off"; } catch { return true; } };
 const promptEl = (item) => el("div", { class: "prompt" + (item.prompt.length > 60 ? " long" : "") }, item.prompt);
@@ -58,7 +61,10 @@ function countUp(node, target, format = (x) => String(Math.round(x))) {
 const CHECK = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true"); s.innerHTML = '<path d="M4 12.5 L9.5 18 L20 6.5"/>'; return s; };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
-const HOME_ORDER = ["interview", "poker", "quick", "banking", "accounting", "betting", "moose", "novyx", "energy", "all"];
+const ALL_SETS = ["interview", "poker", "quick", "banking", "accounting", "betting", "moose", "novyx", "energy"];
+const prioritySets = () => setsForAreas(store.priorities?.areas ?? []);
+const rungOf = (set) => rungDetail(store.attempts, set, store.stamps, store.starredKeys());
+const unlockedSet = (g) => !UNLOCK_AFTER[g] || store.unlocked.includes(g) || rungOf(UNLOCK_AFTER[g]).rung >= 4;
 
 const el = (tag, attrs = {}, ...children) => {
   const node = document.createElement(tag);
@@ -95,62 +101,114 @@ const nice = (name) => name.replace(/_/g, " ");
 const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], store.starredKeys())];
 
 // ---------- home ----------
-function welcome() {
-  const pick = (goal, title, sub) => el("button", { onclick: () => { store.goal = goal; state.group = defaultGroupForGoal(goal); remember(); store.save(); home(); } },
-    el("span", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, sub)));
+function welcome(existing = null, onDone = null) {
+  const draft = { areas: [...(existing?.areas ?? [])], interviewDate: existing?.interviewDate ?? null, minutes: existing?.minutes ?? 10, when: existing?.when ?? null };
+  const finish = () => {
+    store.priorities = draft;
+    store.goal = draft.areas[0] === "poker" ? "poker" : draft.areas[0] === "quick" ? "general" : "interviews";
+    state.group = "today"; state.count = draft.minutes === 5 ? 5 : draft.minutes === 20 ? 20 : 10; remember(); store.save();
+    if (onDone) return onDone();
+    diagnosticOffer();
+  };
+  const step3 = () => {
+    const chip = (label) => el("button", { "aria-pressed": String(draft.when === label), onclick: () => { draft.when = draft.when === label ? null : label; step3(); } }, label);
+    const mins = (m, sub) => el("button", { "aria-pressed": String(draft.minutes === m), onclick: () => { draft.minutes = m; step3(); } }, el("span", { class: "choice" }, el("span", { class: "title" }, `${m} minutes`), el("span", { class: "muted small" }, sub)));
+    screen(
+      el("h1", {}, "How long each day?"),
+      el("div", { class: "stack" }, mins(5, "a quick hit"), mins(10, "the default"), mins(20, "when you have time")),
+      el("h2", {}, "I'll do this (optional)"),
+      el("div", { class: "row" }, chip("after breakfast"), chip("between classes"), chip("before bed")),
+      el("p", { class: "muted small" }, "Naming a moment roughly doubles the odds you actually do it. You can change all of this later under Priorities.")
+    );
+    setBar([el("button", { onclick: step2 }, "Back"), el("button", { class: "primary", onclick: finish }, existing ? "Save" : "Start")]);
+  };
+  const step2 = () => {
+    const input = el("input", { type: "date", "aria-label": "interview date", value: draft.interviewDate ?? "" });
+    input.addEventListener("change", () => { draft.interviewDate = input.value || null; });
+    screen(
+      el("h1", {}, "When is your next interview?"),
+      el("p", { class: "muted" }, "Optional. Inside two weeks, the finance sets get more weight and typed mode becomes the default."),
+      input
+    );
+    setBar([el("button", { onclick: step1 }, "Back"), el("button", { class: "primary", onclick: () => { draft.interviewDate = input.value || null; step3(); } }, draft.interviewDate ? "Next" : "No date yet")]);
+  };
+  const step1 = () => {
+    const box = (id) => el("button", { "aria-pressed": String(draft.areas.includes(id)), onclick: () => { draft.areas = draft.areas.includes(id) ? draft.areas.filter((x) => x !== id) : [...draft.areas, id]; step1(); } },
+      el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, AREAS[id].title), el("span", { class: "badge" }, draft.areas.includes(id) ? "✓" : "")), el("span", { class: "muted small" }, AREAS[id].sub)));
+    screen(
+      existing ? el("h1", {}, "Priorities") : el("h1", {}, "Napkin"),
+      existing ? null : el("p", { style: "font-size:19px" }, "Ten minutes a day on the numbers interviewers ask. Say it out loud, then check."),
+      el("h2", {}, "What are you here for? Pick one or more."),
+      el("div", { class: "stack" }, AREA_ORDER.map(box)),
+      el("p", { class: "muted small" }, "Free. Nothing to install. Your progress stays in this browser unless you sign in.")
+    );
+    setBar([el("button", { class: "primary", onclick: () => { if (draft.areas.length) step2(); }, disabled: draft.areas.length ? null : "" }, "Next")]);
+  };
+  step1();
+}
+
+function diagnosticOffer() {
+  const sets = prioritySets().slice(0, 3);
   screen(
-    el("h1", {}, "Napkin"),
-    el("p", { style: "font-size:20px" }, "Ten minutes a day on the numbers interviewers ask. Say it out loud, then check."),
-    el("p", { class: "muted" }, "Built by a finance freshman for his own first-round interviews. Free. Nothing to install. Your progress stays in this browser."),
-    el("h2", {}, "What are you here for?"),
-    el("div", { class: "stack" },
-      pick("interviews", "Finance interviews", "Pot odds, multiples, buyout returns. The questions they ask out loud."),
-      pick("poker", "Poker math", "Outs, pot odds, EV, combos, with the exact number next to the shortcut."),
-      pick("general", "Quick mental math", "Percentages, fractions, growth rates, back-of-envelope numbers.")),
-    el("p", { class: "muted small", style: "margin-top:24px" }, "You can switch sets any time.")
+    el("h1", {}, "Six-minute check"),
+    el("p", {}, `Eight typed questions from each of: ${sets.map((s) => GROUP_LABELS[s][0]).join(", ")}. Twenty seconds each. It places you honestly and stars what you miss, so your first real session goes where it counts.`),
+    el("p", { class: "muted small" }, "You can skip it and take it later from the home screen.")
   );
+  setBar([el("button", { onclick: () => home() }, "Skip for now"), el("button", { class: "primary", onclick: startDiagnostic }, "Take it")]);
 }
 
 function home(keepScroll = false) {
-  if (!store.goal && store.attempts.length === 0) return welcome();
+  if (!store.priorities && store.attempts.length === 0) return welcome();
   const starred = store.starredItems().length;
   const days = streak(store.days);
   const due = weeklyCheckDue(new Date(), store.weekly);
+  const pri = prioritySets();
+  const dUntil = daysUntil(store.priorities?.interviewDate ?? null);
   const choice = (key, on, title, sub, pressed) =>
     el("button", { "aria-pressed": String(pressed), onclick: () => { state[key] = on; remember(); home(true); } },
       el("span", { class: "choice" }, el("span", { class: "title" }, title), sub ? el("span", { class: "muted small" }, sub) : null));
-
   const setButton = (g) => {
-    const [title, sub] = GROUP_LABELS[g];
-    const unlocked = isUnlocked(g, store.attempts, store.starredKeys(), store.unlocked);
-    const level = g === "all" ? null : levelOf(g);
-    if (!unlocked) {
+    const [title, sub] = g === "today" ? ["Today", `Starred first, then your priorities: ${pri.map((s) => GROUP_LABELS[s][0]).join(", ")}.`] : GROUP_LABELS[g];
+    if (g !== "today" && g !== "all" && !unlockedSet(g)) {
       return el("div", { class: "card locked" },
-        el("div", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, `Locked until ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} is Solid on every drill.`)),
+        el("div", { class: "choice" }, el("span", { class: "title" }, title), el("span", { class: "muted small" }, `Locked until ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} reaches Solid.`)),
         el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); home(true); } }, "Unlock anyway"));
     }
+    const r = g === "today" || g === "all" ? null : rungOf(g);
     return el("button", { "aria-pressed": String(state.group === g), onclick: () => { state.group = g; remember(); home(true); } },
       el("span", { class: "choice" },
-        el("span", { class: "titlerow" }, el("span", { class: "title" }, title), level ? el("span", { class: `badge l${LEVELS.indexOf(level)}` }, level) : null),
+        el("span", { class: "titlerow" }, el("span", { class: "title" }, title), r ? el("span", { class: `badge l${Math.min(4, Math.floor(r.rung / 2))}` }, r.name + (r.stale ? " · stale" : "")) : null),
         el("span", { class: "muted small" }, sub)));
   };
-
+  const rest = ALL_SETS.filter((g) => !pri.includes(g));
   const todayDone = store.days.includes(dayKey(new Date()));
-  const startLabel = `Start · ${GROUP_LABELS[state.group][0]} · ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`;
+  const groupName = state.group === "today" ? "Today" : GROUP_LABELS[state.group][0];
+  const startLabel = `Start · ${groupName} · ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`;
+  const diagDue = diagnosticDue(store.diagnostics);
   (keepScroll ? render : screen)(
     el("div", { class: "topbar" }, el("div", { class: "brand" }, MARK(), el("h1", {}, "Napkin")), el("span", { class: "muted num" }, days ? `${days}-day streak` : "")),
     el("div", { class: "status num" },
       el("span", {}, todayDone ? "Today: done" : "Today: not yet"),
       el("span", {}, starred ? el("strong", {}, `${starred} starred`) : "Nothing starred"),
+      dUntil !== null && dUntil >= 0 ? el("span", { class: dUntil <= 14 ? "star" : "" }, `Interview in ${dUntil} day${dUntil === 1 ? "" : "s"}`) : null,
       due ? el("span", { class: "star" }, "Sunday check due") : null),
     el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, startLabel),
-    starred ? el("p", { class: "small muted", style: "margin-top:8px" }, `${starred} starred kind${starred === 1 ? "" : "s"} come first.`) : null,
+    dUntil !== null && dUntil < 0 ? el("div", { class: "card notice", style: "margin-top:16px" },
+      el("div", { class: "title" }, "Your interview date has passed"),
+      el("p", { class: "muted small" }, "How did it go? Set the next date, or clear it."),
+      el("div", { class: "row" }, el("button", { onclick: () => welcome(store.priorities, () => home()) }, "Set the next date"), el("button", { onclick: () => { store.priorities = { ...store.priorities, interviewDate: null }; store.save(); home(); } }, "No date for now"))) : null,
+    diagDue ? el("div", { class: "card notice", style: "margin-top:16px" },
+      el("div", { class: "title" }, store.diagnostics.length ? "Time for a re-check" : "Six-minute check"),
+      el("p", { class: "muted small" }, store.diagnostics.length ? "It has been four weeks. Eight typed questions per priority set, to see what moved." : "Eight typed questions per priority set. Places you honestly and stars what you miss."),
+      el("button", { class: "primary", onclick: startDiagnostic }, "Take it")) : null,
     due ? el("div", { class: "card notice", style: "margin-top:16px" },
       el("div", { class: "title" }, "Sunday check"),
       el("p", { class: "muted small" }, "Ten typed questions from what you have started. This is the honest score."),
       el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
-    el("h2", {}, "What do you want to drill?"),
-    el("div", { class: "stack" }, HOME_ORDER.map(setButton)),
+    el("h2", {}, "Your sets"),
+    el("div", { class: "stack" }, ["today", ...pri].map(setButton)),
+    el("button", { class: "link", onclick: () => { state.more = !state.more; home(true); } }, state.more ? "Fewer sets" : `More sets (${rest.length + 1})`),
+    state.more ? el("div", { class: "stack" }, [...rest, "all"].map(setButton)) : null,
     el("h2", {}, "How do you answer?"),
     el("div", { class: "row" },
       choice("mode", "say", "Say it", "Reveal, then grade yourself", state.mode === "say"),
@@ -163,9 +221,10 @@ function home(keepScroll = false) {
     el("div", { class: "spacer" }),
     el("div", { class: "row", style: "margin-top:24px" },
       el("button", { class: "link", onclick: review }, "Starred"),
-      el("button", { class: "link", onclick: stats }, "Stats"),
+      el("button", { class: "link", onclick: stats }, "Levels"),
       el("button", { class: "link", onclick: lessonsList }, "Lessons"),
       el("button", { class: "link", onclick: glossary }, "Glossary"),
+      el("button", { class: "link", onclick: () => welcome(store.priorities, () => home()) }, "Priorities"),
       el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
       el("button", { class: "link", onclick: about }, "About"),
       el("button", { class: "link", onclick: account }, syncState.user ? "Account ✓" : "Account"))
@@ -279,10 +338,14 @@ function about() {
 let session = null;
 
 function startSession(group, mode, count, opts = {}) {
-  const names = GROUPS[group];
-  const items = opts.items ?? buildQueue(store, names, count, makeRng());
-  const intros = names.filter((n) => !store.introShown.includes(n));
+  const pri = prioritySets();
+  const names = group === "today" ? pri.flatMap((s) => GROUPS[s]) : GROUPS[group];
+  const urgent = daysUntil(store.priorities?.interviewDate ?? null);
+  if (group === "today" && mode === "say" && urgent !== null && urgent >= 0 && urgent <= 3 && !opts.items) mode = "type";
+  const items = opts.items ?? (group === "today" ? todayQueue(store, pri, count, weightsFor(store, pri, store.priorities?.interviewDate ?? null), makeRng()) : buildQueue(store, names, count, makeRng()));
+  const intros = group === "today" ? [] : names.filter((n) => !store.introShown.includes(n));
   session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", run: opts.run ?? null,
+    target: opts.target ?? null, checkSet: opts.checkSet ?? null, diagSets: opts.diagSets ?? null,
     starredAtStart: new Set(items.filter((it) => store.isStarred(it)).map((it) => it.key)), starsBefore: new Set(store.starredKeys()), streakBefore: streak(store.days), todayBefore: store.days.includes(dayKey(new Date())) };
   if (intros.length && session.kind === "drill") return introScreen();
   nextItem();
@@ -333,7 +396,7 @@ function glossary() {
 function header() {
   const right = session.results.filter((r) => r.correct).length;
   const item = session.items[session.i];
-  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday check" : session.kind === "lesson" ? "Try three" : null;
+  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday check" : session.kind === "lesson" ? "Try three" : session.kind === "diag" ? "Check" : session.kind === "check" ? `${RUNGS[session.target]} check` : null;
   const segs = session.items.map((it, k) => el("span", { class: (k < session.i ? "done" : k === session.i ? "now" : "") + (session.starredAtStart?.has(it.key) ? " star" : "") }));
   return [el("div", { class: "topbar" },
     el("span", { class: "muted num" }, `${label ? label + " · " : ""}${session.i + 1} / ${session.items.length} · ${right} right`),
@@ -341,11 +404,15 @@ function header() {
     el("div", { class: "progress", role: "progressbar", "aria-valuenow": String(session.i), "aria-valuemin": "0", "aria-valuemax": String(session.items.length), "aria-label": "session progress" }, ...segs)];
 }
 
+let diagTimer = null;
 function nextItem() {
+  clearTimeout(diagTimer);
   if (session.i >= session.items.length) return finish();
   const item = session.items[session.i];
+  if (session.kind === "diag" && session.skipSets?.has(item.set)) { session.i += 1; return nextItem(); }
   const t0 = performance.now();
   const seconds = () => Math.round((performance.now() - t0) / 100) / 10;
+  if (session.kind === "diag") diagTimer = setTimeout(() => { if (session && session.items[session.i] === item && !session.graded) grade(item, false, ITEM_SECONDS, "(time)"); }, ITEM_SECONDS * 1000);
 
   if (session.mode === "say") {
     const reveal = () => {
@@ -394,18 +461,34 @@ function nextItem() {
 
 function grade(item, correct, secs, typed) {
   keys({});
+  clearTimeout(diagTimer);
+  if (session.kind === "diag") {
+    session.diagRun ??= {}; session.skipSets ??= new Set();
+    session.diagRun[item.set] = correct ? 0 : (session.diagRun[item.set] ?? 0) + 1;
+    if (session.diagRun[item.set] >= 4) session.skipSets.add(item.set);
+  }
   const wasStarred = store.isStarred(item);
   const family = familyOf(item);
   const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000 };
   store.record(item, attempt);
   store.save();
-  session.results.push(attempt);
+  if (session.kind !== "diag" && session.kind !== "check") session.results.push(attempt);
   const cleared = wasStarred && !store.isStarred(item);
   const fam = FAMILIES[family] ?? { name: nice(item.drill), method: null };
   const lessonId = LESSON_BY_FAMILY[family];
   const status = cleared ? el("p", { class: "star" }, `Star cleared: ${fam.name}. Two clean reps in a row.`)
     : !correct ? el("p", { class: "star" }, `Starred: ${fam.name}. Comes back with new numbers until you get two in a row.`) : null;
   const next = () => { session.i += 1; nextItem(); };
+  if (session.kind === "diag" || session.kind === "check") {
+    session.results.push(attempt);
+    screen(header(), promptEl(item),
+      el("div", { class: `mark ${correct ? "ok" : "miss"}` }, correct ? CHECK() : "✗ ", `${correct ? "Correct" : typed === "(time)" ? "Out of time" : "Missed"} · ${secs.toFixed(1)}s`),
+      el("div", { class: "answer num" }, display(item)),
+      el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")));
+    setBar([el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish")], true, correct ? "ok" : "miss");
+    keys({ Enter: next, " ": next });
+    return;
+  }
   const tryOne = () => {
     for (let k = 0; k < 20; k++) {
       const fresh = DRILLS[item.drill](makeRng(), { family });
@@ -446,10 +529,13 @@ function finish() {
   const best = sessionBest(r);
   if (best !== null && session.kind === "drill") {
     const isNew = store.recordBest(session.group, best);
-    bestLine = isNew ? `New personal best for ${GROUP_LABELS[session.group][0]}: ${best.toFixed(1)}s.` : `Best for this set: ${store.bests[session.group].toFixed(1)}s.`;
+    const gname = session.group === "today" ? "Today" : GROUP_LABELS[session.group][0];
+    bestLine = isNew ? `New personal best for ${gname}: ${best.toFixed(1)}s.` : `Best for this set: ${store.bests[session.group].toFixed(1)}s.`;
   }
   store.save();
   if (session.kind === "interview") return interviewResult(right, total);
+  if (session.kind === "diag") return diagnosticResult();
+  if (session.kind === "check") return checkResult(right);
   const starred = store.starredItems();
   const acc = r.length ? right / r.length : 0;
   const rank = acc >= 0.9 ? "Excellent" : acc >= 0.6 ? "Great" : "Good";
@@ -472,7 +558,7 @@ function finish() {
     el("p", { class: "muted small" }, changed),
     el("p", { class: "small" }, goal),
     bestLine ? el("p", { class: "star" }, bestLine) : null,
-    session.kind === "drill" && session.group !== "all" ? el("p", { class: "muted small" }, `${GROUP_LABELS[session.group][0]} level: ${levelOf(session.group)}${session.mode === "say" ? " (say mode does not change levels)" : ""}`) : null,
+    session.kind === "drill" && session.group !== "all" && session.group !== "today" ? el("p", { class: "muted small" }, `${GROUP_LABELS[session.group][0]}: ${rungOf(session.group).name}${session.mode === "say" ? " (say mode does not change levels)" : ""}`) : null,
     starred.length ? el("h2", {}, "Starred for next time") : null,
     ...starred.slice(0, 8).map((st) => el("p", { class: "small" }, el("strong", {}, (FAMILIES[st.family]?.name ?? nice(st.drill)) + ": "), el("span", { class: "muted" }, st.example))),
     starred.length > 8 ? el("p", { class: "muted small" }, `and ${starred.length - 8} more`) : null,
@@ -499,6 +585,63 @@ function startWeekly() {
 }
 
 // ---------- interview run ----------
+// ---------- diagnostic ----------
+function startDiagnostic() {
+  const sets = prioritySets().slice(0, 3);
+  const items = buildDiagnostic(sets, makeRng());
+  session = null;
+  startSession("today", "diag", items.length, { items, kind: "diag", diagSets: sets });
+}
+
+function diagnosticResult() {
+  const results = {};
+  for (const set of session.diagSets) results[set] = { right: 0, total: 0 };
+  for (let k = 0; k < session.items.length; k++) {
+    const it = session.items[k];
+    if (session.skipSets?.has(it.set) && !session.results.find((r) => r.key === it.key)) continue;
+    const r = session.results.find((x) => x.key === it.key);
+    if (r) { results[it.set].total += 1; if (r.correct) results[it.set].right += 1; }
+  }
+  const placed = placeFromResults(results);
+  const ts = Date.now() / 1000;
+  for (const [set, p] of Object.entries(placed)) store.stamp(set, p.rung, ts);
+  store.addDiagnostic({ ts, results });
+  store.save();
+  const prev = store.diagnostics.length > 1 ? store.diagnostics[store.diagnostics.length - 2].results : null;
+  screen(
+    el("h1", {}, "Where you start"),
+    el("p", { class: "muted" }, "Counts, not percentages. Eight questions is enough to place you, not to grade you."),
+    ...Object.entries(placed).map(([set, p]) => el("div", { class: "card", style: "margin-bottom:8px" },
+      el("div", { class: "titlerow" }, el("span", { class: "title" }, GROUP_LABELS[set][0]), el("span", { class: `badge l${Math.min(4, Math.floor(p.rung / 2))}` }, RUNGS[p.rung])),
+      el("div", { class: "muted small num" }, p.label + (prev?.[set] ? ` · last time ${prev[set].right} of ${prev[set].total}` : "") + (session.skipSets?.has(set) ? " · stopped early after four misses" : "")))),
+    store.starredItems().length ? el("p", { class: "small star", style: "margin-top:12px" }, `${store.starredItems().length} kinds starred. They come first in your next session.`) : null,
+    el("p", { class: "muted small" }, "Levels above Mostly right need a level check, which you can sit from the Levels screen once your typed sessions support it.")
+  );
+  setBar([el("button", { class: "primary", onclick: () => startSession("today", "type", state.count) }, "Start a typed session"), el("button", { onclick: () => home() }, "Home")]);
+}
+
+// ---------- level checks ----------
+function startCheck(set, target) {
+  const lock = store.checkLocks[set];
+  if (lock && Date.now() / 1000 - lock < 86400) return;
+  session = null;
+  startSession(set, "check", 10, { items: buildLevelCheck(store.attempts, set, makeRng()), kind: "check", target, checkSet: set });
+}
+
+function checkResult(right) {
+  const pass = gradeLevelCheck(right, session.target);
+  const ts = Date.now() / 1000;
+  if (pass) store.stamp(session.checkSet, session.target, ts); else store.lockCheck(session.checkSet, ts);
+  store.save();
+  screen(
+    el("h1", {}, pass ? `${RUNGS[session.target]}.` : "Not yet"),
+    el("div", { class: "card" },
+      el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 10 · needed ${checkRequirement(session.target).need}`),
+      el("p", { class: "muted" }, pass ? `${GROUP_LABELS[session.checkSet][0]} is now ${RUNGS[session.target]}. It decays if you stop practising typed.` : "Misses are starred. The check unlocks again in 24 hours; drill the starred kinds first."))
+  );
+  setBar([el("button", { class: "primary", onclick: () => startSession(session.checkSet, "type", 10) }, "Drill this set"), el("button", { onclick: () => home() }, "Home")]);
+}
+
 function runsMenu() {
   screen(
     el("h1", {}, "Interview runs"),
@@ -577,8 +720,17 @@ function stats() {
     setBar([el("button", { class: "primary", onclick: () => startSession(state.group, state.mode, state.count) }, "Start a session")]);
     return;
   }
+  const setRows = [...new Set([...prioritySets(), ...ALL_SETS])].map((set) => ({ set, d: rungOf(set) })).filter((r) => r.d.rung > 0 || prioritySets().includes(r.set));
   screen(
-    el("h1", {}, "Stats"),
+    el("h1", {}, "Levels"),
+    el("div", { class: "stack" }, setRows.map(({ set, d }) => {
+      const locked = store.checkLocks[set] && Date.now() / 1000 - store.checkLocks[set] < 86400;
+      return el("div", { class: "card" },
+        el("div", { class: "titlerow" }, el("span", { class: "title" }, GROUP_LABELS[set][0]), el("span", { class: `badge l${Math.min(4, Math.floor(d.rung / 2))}` }, d.name + (d.stale ? " · stale" : ""))),
+        el("div", { class: "muted small" }, d.next),
+        d.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(set, d.canCheck) }, `Sit the ${RUNGS[d.canCheck]} check`) : locked ? el("div", { class: "muted small" }, "Check locked for 24 hours after a miss.") : null);
+    })),
+    el("h2", {}, "Stats"),
     el("div", { class: "tiles" },
       el("div", { class: "tile" }, el("div", { class: "v num" }, todayAcc === null ? "–" : `${todayAcc}%`), el("div", { class: "l" }, "today")),
       el("div", { class: "tile" }, el("div", { class: "v num" }, String(streak(store.days))), el("div", { class: "l" }, "day streak")),
@@ -595,7 +747,7 @@ function stats() {
       const blob = new Blob([JSON.stringify({ attempts: store.attempts, stars: store.stars, days: store.days, weekly: store.weekly, bests: store.bests }, null, 1)], { type: "application/json" });
       const a = el("a", { href: URL.createObjectURL(blob), download: `napkin-progress-${dayKey(new Date())}.json` }); document.body.append(a); a.click(); a.remove();
     } }, "Export my data"),
-    Object.keys(store.bests).length ? el("p", { class: "muted small" }, "Personal bests: " + Object.entries(store.bests).map(([g, s]) => `${GROUP_LABELS[g][0]} ${s.toFixed(0)}s`).join(" · ")) : null,
+    Object.keys(store.bests).length ? el("p", { class: "muted small" }, "Personal bests: " + Object.entries(store.bests).map(([g, s]) => `${g === "today" ? "Today" : GROUP_LABELS[g]?.[0] ?? g} ${s.toFixed(0)}s`).join(" · ")) : null,
     el("button", { class: "link", onclick: () => home() }, "Back")
   );
 }

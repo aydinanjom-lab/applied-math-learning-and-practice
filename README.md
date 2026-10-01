@@ -28,13 +28,13 @@ Every time this repository changes, Netlify updates the page on its own.
 
 then open http://localhost:8000 in a browser.
 
-**First visit:** the page asks what you are here for (finance interviews, poker, quick math) and sets your default set. **Install:** on a phone, Add to Home Screen gives an icon and offline start.
+**First visit:** three quick screens (what you are here for, an optional interview date, minutes per day), then an optional six-minute typed check that places you per set and stars what you miss. Your "Today" session draws from your priority sets, weighted to where you are weak and how close the interview is. Change priorities any time from the home screen. **Install:** on a phone, Add to Home Screen gives an icon and offline start.
 
 **What's on the page:** nine drill sets (interview, poker, quick math, banking interview numbers, accounting interview numbers,
 sports betting math, Mighty Moose numbers, Novyx numbers, Houston energy basics), 76 drills in all, plus 18 one-minute
 lessons on the standard mental-math methods, each with a "Try three" button, an Interview run (the FIR question, three typed answers,
-90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), three interview runs (poker, finance, accounting), a level per set from your typed
-answers only (New, Learning, Solid, Fast, Cold), a daily streak with one free skip a week, and personal bests. Sports
+90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), three interview runs (poker, finance, accounting), an eight-rung level per set from typed
+answers only (Unplaced to Cold; the top four rungs need a passed ten-question level check and decay if you stop practising), a daily streak with one free skip a week, and personal bests. Sports
 betting math unlocks once poker is Solid on every drill, with an "unlock anyway" link. The betting set is math practice
 only: odds are generated, and nothing is ever recorded as a bet.
 
