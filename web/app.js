@@ -165,6 +165,7 @@ function home(keepScroll = false) {
       el("button", { class: "link", onclick: review }, "Starred"),
       el("button", { class: "link", onclick: stats }, "Stats"),
       el("button", { class: "link", onclick: lessonsList }, "Lessons"),
+      el("button", { class: "link", onclick: glossary }, "Glossary"),
       el("button", { class: "link", onclick: () => explain("card") }, "Index card"),
       el("button", { class: "link", onclick: about }, "About"),
       el("button", { class: "link", onclick: account }, syncState.user ? "Account ✓" : "Account"))
@@ -290,11 +291,30 @@ function startSession(group, mode, count, opts = {}) {
 function introScreen() {
   screen(
     el("h2", {}, "First time on these drills"),
-    el("p", { class: "muted" }, "One line each. You will not see this again."),
+    el("p", { class: "muted" }, "One line each. This screen shows once, but every definition stays in the Glossary on the home screen whenever you want them."),
     SET_NOTES[session.group] ? el("p", { class: "star small" }, SET_NOTES[session.group]) : null,
     ...session.intros.map((n) => el("div", { class: "definition" }, el("strong", {}, nice(n)), el("br"), DEFINITIONS[n]))
   );
   setBar([el("button", { class: "primary", onclick: () => { session.intros.forEach((n) => store.markIntroShown(n)); store.save(); nextItem(); } }, "Got it, start")]);
+}
+
+function glossary() {
+  const sets = HOME_ORDER.filter((g) => g !== "all");
+  screen(
+    el("h1", {}, "Glossary"),
+    el("p", { class: "muted" }, "Every drill's one-line definition, by set. The same lines you see the first time a drill appears."),
+    ...sets.flatMap((g) => [
+      el("h2", {}, GROUP_LABELS[g][0]),
+      SET_NOTES[g] ? el("p", { class: "star small" }, SET_NOTES[g]) : null,
+      el("div", { class: "stack" }, GROUPS[g].map((d) => el("div", { class: "card", style: "padding:12px 14px" },
+        el("div", { class: "titlerow" }, el("span", { class: "title" }, nice(d)), FAMILIES[d]?.method ? el("span", { class: "badge" }, "method below") : null),
+        el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
+        FAMILIES[d]?.method ? el("div", { class: "small muted", style: "font-weight:400;margin-top:4px" }, el("strong", {}, "Method: "), FAMILIES[d].method) : null,
+        LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => lesson(LESSON_BY_FAMILY[d], glossary) }, "Read the one-minute method") : null))),
+    ]),
+    el("div", { style: "height:16px" }),
+    el("button", { class: "link", onclick: () => home() }, "Back")
+  );
 }
 
 function header() {
