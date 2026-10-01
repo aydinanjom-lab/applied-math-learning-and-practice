@@ -98,6 +98,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 |---|---|
 | `run` (browser driving) | Light and dark checks that Reveal and Yes/No share the same bar position, digits use a tabular font, the answer is 42px, dark mode has no shadows; caught a function I had accidentally cut. |
 
+## Used for the advance plan (2026-10-01)
+
+| Skill | What it was used for |
+|---|---|
+| `dispatching-parallel-agents` | Four brainstorms at once: priorities onboarding, diagnostic and levels, quant content, club shipping. Each with sources. |
+| `brainstorming` | The synthesis: decisions, disagreements resolved, build order, refused list. |
+| `test-driven-development` | Glossary notes: store and merge rules tested before the textareas were added. 50 tests. |
+
 ## Still to use
 
 | Skill | When |
