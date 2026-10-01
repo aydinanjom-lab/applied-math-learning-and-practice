@@ -32,7 +32,7 @@ then open http://localhost:8000 in a browser.
 
 **What's on the page:** fourteen drill sets (interview, poker, quick math, banking interview numbers, accounting interview numbers,
 valuation pieces, accounting walks, deal math, rates and options, probability and statistics, sports betting math, Mighty Moose
-numbers, Novyx numbers, Houston energy basics), 115 drills in all, plus 31 one-minute lessons on the standard methods, each with a
+numbers, Novyx numbers, Houston energy basics), 112 drills in all, plus 31 one-minute lessons on the standard methods, each with a
 "Try three" button. Every question has an "I don't know this" link: it marks the question wrong, stars that kind of question, and
 adds the topic with its lesson to a Lessons card on the home screen, where it stays until two clean typed reps or you tap Got it. an Interview run (the FIR question, three typed answers,
 90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), three interview runs (poker, finance, accounting), an eight-rung level per set from typed
