@@ -30,3 +30,14 @@ GitHub Pages serves the site at the domain. `web/CNAME` carries the name into ev
 | CNAME | www | aydinanjom-lab.github.io |
 
 Then in the repository: Settings → Pages → Custom domain → `napkinprep.com`, Save, and tick "Enforce HTTPS" once the certificate check passes (a few minutes to an hour). The github.io address redirects to the domain afterwards. Supabase: add `https://napkinprep.com/**` to the redirect list and make it the Site URL, or sign-in links will send people to the old address.
+
+## Clubs (second SQL file)
+
+Run `supabase/clubs.sql` in the SQL Editor the same way as the first file. It adds three tables (clubs, members, club sessions), their row-level security, and the functions the app calls. Every club call goes through a function, so the privacy rules live in one place:
+
+- A leader never has read access to anyone's progress row. The summary function computes aggregates and returns nulls for everything but the member count until five members have practised in the last week.
+- The leaderboard is off per club by default, opt-in per member, first names only, typed answers only, top ten, last seven days.
+- A club session is a seed and a set id. Every phone derives the same ten questions from the seed; no questions are stored. Anyone with the four-letter code can fetch the seed, which holds nothing personal.
+- A "hide betting" flag per club removes the betting set from members' Practice page and from the club-session set picker.
+
+Links: join `https://napkinprep.com/#/join/CLUB-CODE`, session `https://napkinprep.com/#/s/MXQ7`. A join link opened before sign-in holds the code locally and finishes the join after the email link.

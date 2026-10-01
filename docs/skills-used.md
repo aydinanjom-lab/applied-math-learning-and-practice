@@ -128,6 +128,13 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | Router: parse, params, unknown routes, tab mapping. 79 tests. |
 | `run` (browser driving) | Every tab, set page, session from a set page, reload on a session, lesson route, back button, priorities save, unknown route, wide-screen rail. |
 
+## Used for clubs (2026-10-01)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | Club codes, deterministic shared sessions, summary wording with the five-member floor, held join. 84 tests. |
+| `run` (browser driving, mocked backend) | Join link signed out, create club, leader page, new session, member join by link, run the shared session, tags on attempts, same first question on a second device, board opt-in. |
+
 ## Still to use
 
 | Skill | When |

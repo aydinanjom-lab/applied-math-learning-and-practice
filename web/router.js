@@ -13,7 +13,7 @@ const ROUTES = [
   ["/lessons", "lessons"], ["/lesson/:id", "lesson"], ["/glossary", "glossary"], ["/card", "card"], ["/explain/:name", "explain"],
   ["/progress", "progress"],
   ["/you", "you"], ["/account", "account"], ["/priorities", "priorities"], ["/about", "about"],
-  ["/join/:code", "join"], ["/s/:short", "clubSession"], ["/club", "club"],
+  ["/join/:code", "join"], ["/s/:short", "clubSession"], ["/club", "club"], ["/club/:id", "club"],
   ["/session", "session"],
 ];
 

@@ -7,6 +7,7 @@ import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLev
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store } from "./store.js";
 import { parseRoute, TABS } from "./router.js";
+import { normalizeCode, suggestCode, shortCode, newSeed, clubSessionItems, clubSessionLink, joinLink, summaryRows, holdJoin, takeJoin } from "./clubs.js";
 import { SyncClient, mergeProgress } from "./sync.js";
 import { SUPABASE } from "./config.js";
 import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
@@ -31,7 +32,7 @@ const MARK = () => { const s = document.createElementNS("http://www.w3.org/2000/
   s.innerHTML = '<g transform="rotate(-8 32 32)"><path d="M10 10 H40 L54 24 V54 H10 Z" fill="currentColor"/><path d="M40 10 V24 H54 Z" fill="#4f46e5"/></g>'; return s; };
 const store = new Store(window.localStorage);
 const sync = new SyncClient(SUPABASE);
-const syncState = { user: null, last: null, error: null, busy: false };
+const syncState = { user: null, last: null, error: null, busy: false, cohorts: [] };
 let syncTimer = null;
 
 async function pullAndMerge() {
@@ -58,9 +59,21 @@ async function startSync() {
   if (!sync.configured) return;
   try {
     syncState.user = await sync.user();
-    if (syncState.user) { store.onSave = scheduleSync; await pullAndMerge(); if (!session) dispatch(); }
+    if (syncState.user) {
+      store.onSave = scheduleSync; await pullAndMerge();
+      const held = takeJoin(localStorage);
+      if (held) { try { await sync.joinCohort(held); } catch (e) { syncState.error = e.message ?? String(e); } }
+      await loadCohorts();
+      if (!session) dispatch();
+    }
   } catch (e) { syncState.error = e.message ?? String(e); }
 }
+async function loadCohorts() {
+  if (!syncState.user) { syncState.cohorts = []; return; }
+  try { syncState.cohorts = (await sync.myCohorts()) ?? []; } catch (e) { syncState.error = e.message ?? String(e); }
+}
+// A club can hide the betting set for its members (under-21 members, adviser objections).
+const visibleSets = () => (syncState.cohorts.some((c) => c.hide_betting) ? ALL_SETS.filter((g) => g !== "betting") : ALL_SETS);
 const saved = (() => { try { return JSON.parse(localStorage.getItem("napkin_state") || "{}"); } catch { return {}; } })();
 const state = { group: saved.group ?? "today", mode: saved.mode ?? "say", count: saved.count ?? 10, more: false };
 const remember = () => { try { localStorage.setItem("napkin_state", JSON.stringify(state)); } catch {} };
@@ -241,7 +254,7 @@ function setCard(g) {
 // Practice: every set, the pickers, and the interview runs.
 function practice() {
   const pri = prioritySets();
-  const rest = ALL_SETS.filter((g) => !pri.includes(g));
+  const rest = visibleSets().filter((g) => !pri.includes(g));
   page("practice",
     el("h1", {}, "Practice"),
     el("p", { class: "muted" }, "Pick a set to see where you stand and start it. Your priority sets come first."),
@@ -293,18 +306,130 @@ function you() {
     el("div", { class: "stack" },
       row(syncState.user ? "Account ✓" : "Account", syncState.user ? `Signed in as ${syncState.user.email}. Progress syncs between devices.` : sync.configured ? "Sign in by email link to share progress between devices." : "Sync is not switched on for this copy.", "#/account"),
       row("Priorities", pri ? `${(pri.areas ?? []).map((a) => AREAS[a]?.title ?? a).join(", ")}${pri.interviewDate ? ` · interview ${pri.interviewDate}` : ""} · ${pri.minutes} min` : "Pick what you are here for.", "#/priorities"),
-      row("Club", "Join a club with a code, or lead one. Coming next.", "#/club"),
+      row("Club", syncState.cohorts.length ? syncState.cohorts.map((c) => c.name).join(", ") : "Join a club with a code, or lead one.", "#/club"),
       row("Poker index card", "The pot-odds answer and its follow-ups, on one card.", "#/card"),
       row("About", "What Napkin is, your data, terms, keyboard shortcuts, feedback.", "#/about"))
   );
 }
 
-function clubPage() {
+// ---------- clubs ----------
+const copyButton = (text, label = "Copy link") => el("button", { class: "link small", onclick: async (e) => { try { await navigator.clipboard.writeText(text); e.target.textContent = "Copied"; } catch { e.target.textContent = text; } } }, label);
+
+function clubPage(opts = {}) {
+  if (!sync.configured) return page("you", el("h1", {}, "Club"), el("p", {}, "Clubs need accounts, and sync is not switched on for this copy of Napkin."), back("#/you"));
+  if (!syncState.user) {
+    return page("you", el("h1", {}, "Club"),
+      el("p", {}, opts.pendingCode ? `You are joining ${opts.pendingCode}. Sign in first; the join finishes on its own once you are back.` : "Join a club with its code, or lead one. Sign in first so the club can count you."),
+      el("p", { class: "muted small" }, "A club leader only ever sees aggregate numbers, and nothing at all until five members have practised."),
+      el("button", { class: "primary", onclick: () => go("#/account") }, "Sign in"), back("#/you"));
+  }
+  const status = el("p", { class: "muted small" }, syncState.error ?? "");
+  const codeInput = el("input", { type: "text", "aria-label": "club code", placeholder: "CLUB-CODE", autocapitalize: "characters", autocomplete: "off", style: "font-size:18px" });
+  const joinNow = async () => {
+    const code = normalizeCode(codeInput.value); if (!code) { status.textContent = "A code is 4 to 20 letters, digits, or dashes."; return; }
+    status.textContent = "Joining…";
+    try { await sync.joinCohort(code); await loadCohorts(); go(`#/club`); } catch (e) { status.textContent = `Could not join: ${e.message ?? e}`; }
+  };
+  const nameInput = el("input", { type: "text", "aria-label": "club name", placeholder: "Kelley FIR, fall 2026", style: "font-size:18px" });
+  const newCode = el("input", { type: "text", "aria-label": "new club code", placeholder: "KELLEY-FIR-F26", autocapitalize: "characters", autocomplete: "off", style: "font-size:18px" });
+  nameInput.addEventListener("input", () => { if (!newCode.dataset.touched) newCode.value = suggestCode(nameInput.value) ?? ""; });
+  newCode.addEventListener("input", () => { newCode.dataset.touched = "1"; });
+  const createNow = async () => {
+    const code = normalizeCode(newCode.value); const name = nameInput.value.trim();
+    if (name.length < 2 || !code) { status.textContent = "Give the club a name and a code of 4 to 20 letters, digits, or dashes."; return; }
+    status.textContent = "Creating…";
+    try { await sync.createCohort(name, code); await loadCohorts(); go(`#/club`); } catch (e) { status.textContent = `Could not create: ${e.message ?? e}`; }
+  };
+  const mine = syncState.cohorts;
   page("you",
     el("h1", {}, "Club"),
-    el("p", {}, "Clubs are next on the build list: a join code, a shared ten-question session everyone runs from the same seed, and a leader page that shows only aggregate numbers."),
-    el("p", { class: "muted small" }, "Until then, this page is a placeholder. Nothing here records anything."),
+    mine.length ? el("h2", { style: "margin-top:0" }, "Your clubs") : el("p", {}, "You are not in a club yet."),
+    ...mine.map((c) => el("button", { onclick: () => go(`#/club/${c.id}`) }, el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, c.name), el("span", { class: "badge" }, c.is_owner ? "leader" : "member")), el("span", { class: "muted small num" }, `${c.code} · ${c.members} member${c.members === 1 ? "" : "s"}`)))),
+    el("h2", {}, "Join a club"),
+    el("form", { onsubmit: (e) => { e.preventDefault(); joinNow(); } }, codeInput, el("div", { style: "height:8px" }), el("button", { type: "submit" }, "Join")),
+    el("h2", {}, "Lead a club"),
+    el("p", { class: "muted small" }, "You get a code to share, a shared ten-question session with a four-letter code, and a page of aggregate numbers. Never anyone's individual score."),
+    el("form", { onsubmit: (e) => { e.preventDefault(); createNow(); } }, nameInput, el("div", { style: "height:8px" }), newCode, el("div", { style: "height:8px" }), el("button", { type: "submit" }, "Create the club")),
+    status,
     back("#/you"));
+}
+
+function clubDetail(id) {
+  const c = syncState.cohorts.find((x) => x.id === id);
+  if (!c) return go("#/club");
+  const status = el("p", { class: "muted small" }, "");
+  const summaryBox = el("div", { class: "stack" });
+  const boardBox = el("div", { class: "stack" });
+  const sessionBox = el("div", {});
+  const refresh = async () => { await loadCohorts(); clubDetail(id); };
+  if (c.is_owner) {
+    sync.cohortSummary(id).then((sum) => summaryBox.replaceChildren(...summaryRows(sum).map(([k, v]) => (v.length > 40
+        ? el("div", { class: "card", style: "padding:10px 14px" }, el("div", { class: "muted small" }, k), el("div", { class: "small", style: "margin-top:4px" }, v))
+        : el("div", { class: "card", style: "padding:10px 14px" }, el("div", { class: "titlerow" }, el("span", { class: "muted small" }, k), el("span", { class: "num", style: "font-weight:600;text-align:right" }, v)))))))
+      .catch((e) => summaryBox.replaceChildren(el("p", { class: "muted small" }, `Summary unavailable: ${e.message ?? e}`)));
+  }
+  if (c.leaderboard) {
+    sync.cohortLeaderboard(id).then((rows) => boardBox.replaceChildren(rows?.length ? el("ol", { class: "board num" }, ...rows.map((r) => el("li", {}, el("span", {}, r.first_name), el("span", {}, `${r.score} typed right`)))) : el("p", { class: "muted small" }, "Nobody on the board yet this week.")))
+      .catch(() => boardBox.replaceChildren(el("p", { class: "muted small" }, "Board unavailable.")));
+  }
+  const setPick = el("select", { "aria-label": "set for the club session", style: "font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); width: 100%" },
+    ...visibleSets().filter((g) => g !== "betting" || !c.hide_betting).map((g) => el("option", { value: g }, GROUP_LABELS[g][0])));
+  const newSession = async () => {
+    status.textContent = "Creating…";
+    try {
+      const r = await sync.createClubSession(id, setPick.value, newSeed(), shortCode());
+      const link = clubSessionLink(r.short_code, location.origin + location.pathname);
+      sessionBox.replaceChildren(el("div", { class: "card notice" }, el("div", { class: "title num" }, `Session ${r.short_code}`), el("p", { class: "muted small" }, `${GROUP_LABELS[r.set_id][0]}, ten typed questions, the same on every phone. Share the code or the link.`), el("div", { class: "row" }, copyButton(link), el("button", { class: "link small", onclick: () => go(`#/s/${r.short_code}`) }, "Run it now"))));
+      status.textContent = "";
+    } catch (e) { status.textContent = `Could not create a session: ${e.message ?? e}`; }
+  };
+  const nameIn = el("input", { type: "text", "aria-label": "first name for the board", placeholder: "First name", value: c.first_name ?? "", style: "font-size:18px" });
+  const optIn = async (on) => { try { await sync.setBoardOptIn(id, on, nameIn.value.trim()); await refresh(); } catch (e) { status.textContent = e.message ?? String(e); } };
+  const flag = async (patch) => { try { await sync.setCohortFlags(id, patch.hide_betting ?? null, patch.leaderboard ?? null); await refresh(); } catch (e) { status.textContent = e.message ?? String(e); } };
+  screen(
+    el("div", { class: "topbar" }, el("h1", {}, c.name), el("span", { class: "badge" }, c.is_owner ? "leader" : "member")),
+    el("p", { class: "muted small num" }, `Code ${c.code} · ${c.members} member${c.members === 1 ? "" : "s"} · `, copyButton(joinLink(c.code, location.origin + location.pathname), "Copy join link")),
+    c.is_owner ? el("h2", {}, "This week, in aggregate") : null,
+    c.is_owner ? summaryBox : null,
+    c.is_owner ? el("h2", {}, "Club session") : null,
+    c.is_owner ? el("div", {}, setPick, el("div", { style: "height:8px" }), el("button", { class: "primary", onclick: newSession }, "New club session"), sessionBox) : null,
+    c.is_owner ? el("h2", {}, "Settings") : null,
+    c.is_owner ? el("div", { class: "row" },
+      el("button", { "aria-pressed": String(c.hide_betting), onclick: () => flag({ hide_betting: !c.hide_betting }) }, el("span", { class: "choice" }, el("span", { class: "title" }, c.hide_betting ? "Betting set hidden" : "Betting set shown"), el("span", { class: "muted small" }, "For under-21 members or an adviser's objection."))),
+      el("button", { "aria-pressed": String(c.leaderboard), onclick: () => flag({ leaderboard: !c.leaderboard }) }, el("span", { class: "choice" }, el("span", { class: "title" }, c.leaderboard ? "Weekly board on" : "Weekly board off"), el("span", { class: "muted small" }, "Opt-in, first names, typed answers only, top ten.")))) : null,
+    c.leaderboard ? el("h2", {}, "This week's board") : null,
+    c.leaderboard ? boardBox : null,
+    c.leaderboard ? el("div", { class: "card", style: "margin-top:8px" }, el("div", { class: "title" }, c.board_opt_in ? "You are on the board" : "Join the board?"), el("p", { class: "muted small" }, "Your first name and your count of typed correct answers this week. Nothing else. Leave any time."),
+      c.board_opt_in ? el("button", { onclick: () => optIn(false) }, "Leave the board") : el("div", {}, nameIn, el("div", { style: "height:8px" }), el("button", { onclick: () => { if (nameIn.value.trim()) optIn(true); else status.textContent = "Add a first name to go on the board."; } }, "Go on the board"))) : null,
+    status,
+    el("h2", {}, c.is_owner ? "Danger" : "Leave"),
+    c.is_owner ? el("button", { class: "link small", onclick: async () => { if (confirm(`Delete ${c.name}? Members keep all their own progress.`)) { await sync.deleteCohort(id); await loadCohorts(); go("#/club"); } } }, "Delete this club")
+      : el("button", { class: "link small", onclick: async () => { await sync.leaveCohort(id); await loadCohorts(); go("#/club"); } }, "Leave this club"),
+    el("div", { style: "height:16px" }),
+    back("#/club"));
+}
+
+async function joinRoute(code) {
+  const clean = normalizeCode(code);
+  if (!clean) return go("#/club");
+  if (!syncState.user) { holdJoin(localStorage, clean); return clubPage({ pendingCode: clean }); }
+  screen(el("h1", {}, "Joining…"), el("p", { class: "muted" }, clean));
+  try { await sync.joinCohort(clean); await loadCohorts(); go("#/club"); }
+  catch (e) { screen(el("h1", {}, "Could not join"), el("p", {}, e.message ?? String(e)), back("#/club")); }
+}
+
+async function clubSessionRoute(short) {
+  if (!sync.configured) return go("#/");
+  screen(el("h1", {}, "Club session"), el("p", { class: "muted num" }, short.toUpperCase()));
+  let r = null;
+  try { r = await sync.clubSessionByCode(short); } catch (e) { return screen(el("h1", {}, "Club session"), el("p", {}, `Could not load it: ${e.message ?? e}`), back("#/")); }
+  if (!r) return screen(el("h1", {}, "No session with that code"), el("p", { class: "muted" }, "Check the four letters with whoever shared it."), back("#/"));
+  const items = clubSessionItems(r.set_id, r.seed);
+  screen(
+    el("h1", {}, `${r.club_name}: ${GROUP_LABELS[r.set_id]?.[0] ?? r.set_id}`),
+    el("p", {}, "Ten typed questions, the same on every phone. Your answers count toward your own levels and stars, and toward the club's completion count. Nobody sees your individual score."),
+    el("p", { class: "muted small num" }, `Session ${r.short_code}`));
+  setBar([el("button", { class: "primary", onclick: () => { session = null; startSession(r.set_id, "type", items.length, { items, kind: "drill", club: { short: r.short_code, clubName: r.club_name } }); } }, "Start"), el("button", { onclick: () => go("#/") }, "Not now")]);
 }
 
 function account() {
@@ -444,7 +569,7 @@ function startSession(group, mode, count, opts = {}) {
   const intros = group === "today" ? [] : names.filter((n) => !store.introShown.includes(n));
   if (location.hash !== "#/session") history.pushState(null, "", "#/session");
   session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", run: opts.run ?? null,
-    target: opts.target ?? null, checkSet: opts.checkSet ?? null, diagSets: opts.diagSets ?? null,
+    target: opts.target ?? null, checkSet: opts.checkSet ?? null, diagSets: opts.diagSets ?? null, club: opts.club ?? null,
     starredAtStart: new Set(items.filter((it) => store.isStarred(it)).map((it) => it.key)), starsBefore: new Set(store.starredKeys()), streakBefore: streak(store.days), todayBefore: store.days.includes(dayKey(new Date())) };
   if (intros.length && session.kind === "drill") return introScreen();
   nextItem();
@@ -576,7 +701,7 @@ function grade(item, correct, secs, typed) {
   }
   const wasStarred = store.isStarred(item);
   const family = familyOf(item);
-  const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000 };
+  const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000, ...(session.club ? { club_session: session.club.short } : {}) };
   store.record(item, attempt);
   store.save();
   if (session.kind !== "diag" && session.kind !== "check") session.results.push(attempt);
@@ -657,7 +782,8 @@ function finish() {
   const changed = [newStars ? `${newStars} new star${newStars === 1 ? "" : "s"}` : null, cleared ? `${cleared} cleared` : null].filter(Boolean).join(" · ") || "No change to stars";
   const goal = starred.length ? `${starred.length} starred left to clear.` : streakNow ? `Day ${((streakNow - 1) % 7) + 1} of 7 this week.` : "Come back tomorrow to start a streak.";
   screen(
-    el("h1", {}, session.kind === "weekly" ? "Sunday check done" : "Session done"),
+    el("h1", {}, session.kind === "weekly" ? "Sunday check done" : session.club ? `Club session ${session.club.short} done` : "Session done"),
+    session.club ? el("p", { class: "muted small" }, `${session.club.clubName}: everyone ran these same ten questions. Your answers are tagged for the club count; no one sees them individually.`) : null,
     el("p", { class: "rank" }, rank),
     el("div", { class: "tiles" },
       tile(right, `of ${r.length} correct`, (x) => String(Math.round(x))),
@@ -881,7 +1007,7 @@ function dispatch() {
   const r = parseRoute(location.hash);
   if (r.name === "session") { if (session) return; return go("#/"); }
   session = null; clearTimeout(diagTimer); keys({});
-  if (!store.priorities && store.attempts.length === 0 && r.name !== "about") return welcome();
+  if (!store.priorities && store.attempts.length === 0 && !["about", "join", "clubSession"].includes(r.name)) return welcome();
   switch (r.name) {
     case "today": return today();
     case "practice": return practice();
@@ -897,7 +1023,9 @@ function dispatch() {
     case "account": return account();
     case "priorities": return welcome(store.priorities);
     case "about": return about();
-    case "club": case "join": case "clubSession": return clubPage();
+    case "club": return r.params.id ? clubDetail(r.params.id) : clubPage();
+    case "join": return joinRoute(r.params.code);
+    case "clubSession": return clubSessionRoute(r.params.short);
     default: return today();
   }
 }

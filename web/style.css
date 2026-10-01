@@ -173,3 +173,5 @@ textarea.note:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 .chips .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: transparent; }
 .chipgap { width: 8px; }
 .tabbar[hidden] { display: none; }
+.board { margin: 0; padding-left: 24px; }
+.board li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }

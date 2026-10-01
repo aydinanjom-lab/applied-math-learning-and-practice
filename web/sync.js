@@ -92,6 +92,24 @@ export class SyncClient {
     if (error) throw error;
     return data?.data ?? null;
   }
+  // Clubs: every call is a database function, so the privacy rules live in SQL (supabase/clubs.sql).
+  async rpc(name, args = {}) {
+    const c = await this.init();
+    const { data, error } = await c.rpc(name, args);
+    if (error) throw error;
+    return data;
+  }
+  myCohorts() { return this.rpc("my_cohorts"); }
+  joinCohort(code) { return this.rpc("join_cohort", { p_code: code }).then((r) => (Array.isArray(r) ? r[0] : r)); }
+  createCohort(name, code) { return this.rpc("create_cohort", { p_name: name, p_code: code }).then((r) => (Array.isArray(r) ? r[0] : r)); }
+  setCohortFlags(id, hideBetting, leaderboard) { return this.rpc("set_cohort_flags", { p_cohort: id, p_hide_betting: hideBetting ?? null, p_leaderboard: leaderboard ?? null }); }
+  setBoardOptIn(id, optIn, firstName) { return this.rpc("set_board_opt_in", { p_cohort: id, p_opt_in: optIn, p_first_name: firstName ?? null }); }
+  leaveCohort(id) { return this.rpc("leave_cohort", { p_cohort: id }); }
+  deleteCohort(id) { return this.rpc("delete_cohort", { p_cohort: id }); }
+  createClubSession(id, setId, seed, short) { return this.rpc("create_club_session", { p_cohort: id, p_set_id: setId, p_seed: seed, p_short: short }).then((r) => (Array.isArray(r) ? r[0] : r)); }
+  clubSessionByCode(short) { return this.rpc("club_session_by_code", { p_short: short }).then((r) => (Array.isArray(r) ? r[0] ?? null : r)); }
+  cohortSummary(id) { return this.rpc("cohort_summary", { p_cohort: id }); }
+  cohortLeaderboard(id) { return this.rpc("cohort_leaderboard", { p_cohort: id }); }
   async save(userId, data) {
     const c = await this.init();
     const { error } = await c.from("progress").upsert({ user_id: userId, data, updated_at: new Date().toISOString() });
