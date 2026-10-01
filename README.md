@@ -9,7 +9,7 @@ Working name: Napkin (domain not yet secured; the name is one string in `web/app
 It is a web page. Open it in any browser, phone included. No installs.
 
 **Hosting:** the page deploys to GitHub Pages on every push (`.github/workflows/pages.yml`), at
-`https://aydinanjom-lab.github.io/applied-math-learning-and-practice/`. Netlify also works (`netlify.toml` is still here) but its free
+`https://napkinprep.com/` (GitHub Pages with a custom domain; the old `aydinanjom-lab.github.io/applied-math-learning-and-practice/` address redirects there). Netlify also works (`netlify.toml` is still here) but its free
 build allowance is shared across a team and can run out.
 
 **Put it on Netlify instead (optional):**
