@@ -41,3 +41,13 @@ Run `supabase/clubs.sql` in the SQL Editor the same way as the first file. It ad
 - A "hide betting" flag per club removes the betting set from members' Practice page and from the club-session set picker.
 
 Links: join `https://napkinprep.com/#/join/CLUB-CODE`, session `https://napkinprep.com/#/s/MXQ7`. A join link opened before sign-in holds the code locally and finishes the join after the email link.
+
+## Sign-in email through Resend (do this before inviting a club)
+
+Supabase's built-in sender allows 2 emails an hour for the whole project. With a custom sender the limit is 30 an hour and adjustable.
+
+1. resend.com: add the domain `napkinprep.com` (region us-east-1) and add its DNS records in Squarespace under Custom Records. Squarespace appends the domain, so the Host is `send` or `resend._domainkey`, not the full name. Wait for every row to verify.
+2. Resend API Keys: create a key with Sending access, limited to napkinprep.com.
+3. Supabase, Authentication, Emails, SMTP Settings: Custom SMTP on; sender `hello@napkinprep.com`, name `Napkin`, host `smtp.resend.com`, port `465`, username `resend`, password the API key.
+4. Supabase, Authentication, Rate Limits: emails per hour to 100.
+5. Test by signing out and back in; the email should come from hello@napkinprep.com.
