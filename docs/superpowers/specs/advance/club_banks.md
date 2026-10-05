@@ -10,7 +10,7 @@ Fit = how much of what the club's members get asked is already in Napkin. Effort
 
 | # | Club | What members are prepping for | Fit today | New work |
 |---|---|---|---|---|
-| 1 | **FIR** (your club) | First-round IB and markets interviews this month | High | None |
+| 1 | **FIR** | First-round IB and markets interviews this month | High | None. On hold while the owner applies. |
 | 2 | **Banking & Trading Association** | IB, sales and trading, equity research | High | 1 set (markets in your head), 1 evening |
 | 3 | **Kelley Undergraduate Research and Trading Club** | Prop trading, market making, personal trading | Medium-high | 1 set (trading math), 1 evening, mostly reworded betting and prob drills |
 | 4 | **Alternative Investment Group** | PE, real estate, hedge funds, derivatives | Medium | 2 sets (real estate, hedge fund exposure), 2 evenings |
@@ -133,7 +133,7 @@ That is about one evening plus a short SQL addition, separate from the new sets.
 
 ## Order I would do it in
 
-1. Launch FIR on the existing bank. Do not build anything new first: you need two weeks of real use to know what to build.
+1. **Not FIR yet.** The owner is still applying to FIR, so pitching it now mixes the tool with the application. Revisit after the FIR decision. Start instead with a private pilot: five to ten friends, classmates, or Hutton peers prepping for the same interviews, in a club created for them. Five is also the summary's privacy floor, so the leader page shows real numbers. Run two weeks, build nothing new, and see what they use.
 2. Add the club `sets` list (one evening). It costs little and every later club needs it.
 3. Build **Markets in your head** and **Trading math** (two evenings). Together with the existing sets they cover the Banking & Trading Association and the Trading Club, which are the next two easiest yeses.
 4. Build **Real estate** (one evening). It covers AIG and the Real Estate Club.
