@@ -88,7 +88,7 @@ export const LESSONS = [
   {
     id: "millions_and_billions", title: "Millions and billions without losing zeros", families: ["back_of_envelope:mktcap", "oil_revenue", "reserve_life", "unit_juggle"],
     method: "Name the unit of each number, multiply the plain numbers, then multiply the units: M x M is trillions; M x thousands is billions; per-day x 365 is per year.",
-    examples: ["$50 x 500M shares = 25,000M = $25B.", "10,000 barrels a day x $70 x 90 days = 63,000,000 = $63M a quarter.", "$1.2B / 40M shares = $30 a share."],
+    examples: ["$50 x 500M shares = 25,000M = $25B.", "10,000 barrels a day x $70 x 90 days = 63,000,000 = $63M a quarter. Shortcut: barrels a day x price x 0.09 gives $M a quarter.", "$1.2B / 40M shares = $30 a share.", "Anchor: $365M a year is $1M a day."],
     when: "Market caps, revenue from a daily rate, per-share numbers.",
     trap: "Dividing millions by millions gives a plain number; dividing millions by thousands gives thousands. Say the units out loud.",
   },
@@ -107,9 +107,9 @@ export const LESSONS = [
     trap: "A high multiple means expensive, a high yield means cheap. They move opposite ways.",
   },
   {
-    id: "pot_odds_three_ways", title: "Pot odds three ways", families: ["pot_odds", "pot_odds_bet:third", "pot_odds_bet:half", "pot_odds_bet:twothirds", "pot_odds_bet:pot", "pot_odds_bet:over", "bluff_break_even", "pot_odds_decision"],
+    id: "pot_odds_three_ways", title: "Pot odds three ways", families: ["pot_odds", "pot_odds_ratio", "pot_odds_bet:third", "pot_odds_bet:half", "pot_odds_bet:twothirds", "pot_odds_bet:pot", "pot_odds_bet:over", "bluff_break_even", "pot_odds_decision"],
     method: "Percent: call / (pot + call). Ratio: pot to call, and 1 / (ratio + 1) is the same percent. When the pot is stated before the bet: bet / (pot + 2 x bet).",
-    examples: ["$10 to call into $30: 10 / 40 = 25%. As a ratio, 3 to 1.", "Half-pot bet: always 25%. Pot-sized bet: always 33%. Two-thirds: 29%.", "Bluffing $50 into $100: it works if they fold 50 / 150 = 33% of the time."],
+    examples: ["$10 to call into $30: 10 / 40 = 25%. As a ratio, 3 to 1.", "Third-pot bet: 20%. Half-pot: 25%. Two-thirds: 29%. Pot-sized: 33%. One and a half pot: 1.5 / 4 = 37.5%.", "Bluffing $50 into $100: it works if they fold 50 / 150 = 33% of the time. A pot-sized bluff needs them to fold half the time.", "Call or fold: compare your chance from the rule of 4 and 2 with the pot-odds number. In this app the drills never sit so close that the rule and the exact math disagree."],
     when: "Every call decision. Ask \"before or after the bet?\" before you answer.",
     trap: "Mixing the two pots. $100 pot, $50 bet: it is 50 / 200 = 25%, not 50 / 150.",
   },
@@ -117,8 +117,22 @@ export const LESSONS = [
     id: "rule_of_4_and_2", title: "Rule of 4 and 2, with the correction", families: ["outs_equity:1", "outs_equity:2"],
     method: "Two cards to come: outs x 4. One card: outs x 2. Above 8 outs with two cards to come, subtract (outs - 8) from the rule-of-4 number.",
     examples: ["9 outs: 36 - 1 = 35% (exact 34.97). One card: 18% (exact 19.6).", "15 outs: 60 - 7 = 53% (exact 54).", "4 outs: 16% and 8% (exact 16.5 and 8.7)."],
-    when: "Any draw. Know 9 outs (flush draw) and 8 outs (open-ended) cold; the rest you derive.",
+    when: "Any draw. Know 9 outs (flush draw) and 8 outs (open-ended) cold; the rest you derive. In every drill here, the plain rule, the corrected rule, and the exact number are all marked correct.",
     trap: "Rule of 4 assumes you see both cards. If a bet on the turn will price you out, use the rule of 2 for the next card only.",
+  },
+  {
+    id: "price_out_draw", title: "Pricing out a draw", families: ["price_out_draw"],
+    method: "Your bet b gives them b / (pot + 2b). Set that above their chance of hitting and solve: b > chance x pot / (1 - 2 x chance).",
+    examples: ["Gutshot, 4 outs, both cards for one bet: about 16%, so b > 0.16 / 0.68 = about a quarter pot.", "Open-ended, 8 outs: about 32%, so b > 0.32 / 0.36 = about 0.85 pot.", "Flush draw, 9 outs: about 35%, so b > 0.35 / 0.30 = more than the pot. With one card to come it is about 20%, and a third of the pot does it."],
+    when: "When you are ahead and want a drawing opponent to make a mistake by calling. The rule of 4 is accurate enough; the drills accept it.",
+    trap: "Assuming they see both cards for one bet. If you bet again on the turn, price each street with the rule of 2 instead.",
+  },
+  {
+    id: "coverage_ratios", title: "Interest coverage at a glance", families: ["interest_coverage"],
+    method: "Coverage = EBITDA / interest. It says how many times over the business can pay its interest.",
+    examples: ["EBITDA 100, interest 25: 4x.", "Below about 2x, lenders get nervous. Above about 4x is comfortable.", "Leverage is the flip side: debt / EBITDA. 5x leverage at 8% interest is coverage of 1 / (5 x 0.08) = 2.5x."],
+    when: "Credit questions, buyout debt sizing, and any \"can this company take more debt?\" question.",
+    trap: "Using net income or EBIT when the question says EBITDA. Say which one you used.",
   },
   {
     id: "count_the_outs", title: "Count the outs", families: ["count_outs"],
@@ -136,10 +150,10 @@ export const LESSONS = [
     trap: "Taxing EBIT, not EBT. Interest is left out on purpose, so the tax is higher than the real tax bill.",
   },
   {
-    id: "terminal_value_two_ways", title: "Terminal value two ways, and the cross-check", families: ["tv_exit_multiple", "tv_perpetuity_vs_exit", "implied_growth", "mid_year_direction:0", "mid_year_direction:1", "mid_year_direction:2"],
+    id: "terminal_value_two_ways", title: "Terminal value two ways, and the cross-check", families: ["perpetuity", "dcf_two_year", "tv_exit_multiple", "tv_perpetuity_vs_exit", "implied_growth", "mid_year_direction:0", "mid_year_direction:1", "mid_year_direction:2"],
     method: "Exit multiple: final EBITDA x the peer multiple. Perpetuity: final cash flow x (1 + g) / (rate - g). Compute both, then back out what one implies about the other.",
     examples: ["EBITDA 100 x 8 = 800. FCF 60, rate 10%, growth 3%: 61.8 / 0.07 = 883. Close enough to trust.", "Implied growth from a multiple: g = (TV x r - FCF) / (TV + FCF). TV 800, r 10%, FCF 50: 30 / 850 = 3.5%.", "Mid-year: each flow is discounted half a year less, so value rises, by about 5% at a 10% rate."],
-    when: "Every DCF ends with a terminal value, and it is usually most of the total. Interviewers ask which method you used and why the two disagree.",
+    when: "Every DCF ends with a terminal value, and it is usually most of the total, which is why the rate and growth assumptions matter so much. Interviewers ask which method you used and why the two disagree.",
     trap: "Growth above the rate, or near it. The perpetuity formula explodes as g approaches r. Long-run growth above about 4% is a red flag.",
   },
   {
@@ -172,7 +186,7 @@ export const LESSONS = [
   },
   {
     id: "option_payoffs", title: "Option payoffs, and parity from the picture", families: ["call_payoff:call", "call_payoff:put", "call_payoff:breakeven", "put_call_parity_number:pvk", "put_call_parity_number:rate", "delta_hedge_shares"],
-    method: "At expiry a call is worth max(stock - strike, 0) and a put max(strike - stock, 0); profit subtracts the premium. Long call plus short put, same strike, draws the same line as owning the stock and owing the strike, so call - put = stock - PV(strike). Delta is the slope of the option's value, and contracts x 100 x delta is your share exposure.",
+    method: "At expiry a call is worth max(stock - strike, 0) and a put max(strike - stock, 0); profit subtracts the premium. Long call plus short put, same strike, draws the same line as owning the stock and owing the strike, so call - put = stock - PV(strike). Delta is the slope of the option's value and, roughly, the chance it finishes in the money. Contracts x 100 x delta is your share exposure.",
     examples: ["50-strike call for 3, stock ends at 58: 8 - 3 = 5. Break-even 53.", "Stock 100, call 8, put 5: PV(strike) = 100 - 3 = 97, so the one-year rate is about 3%.", "20 contracts, delta 0.4: 20 x 100 x 0.4 = 800 shares to sell."],
     when: "Trading interviews. Draw the four payoff lines (long call, short put, long stock, a flat line at minus the strike) and parity is obvious, no formula needed.",
     trap: "Forgetting the premium. The payoff is what the option is worth; the profit is that minus what you paid.",
@@ -182,7 +196,7 @@ export const LESSONS = [
     method: "Fair price is the expected payout. Averages add. For independent things, averages multiply. Tries to a first success average 1 / p. To make a market, quote a bid below fair and an offer above it.",
     examples: ["One die: 3.5. Two dice sum: 7. Two dice product: 12.25.", "Coin until heads: 2 flips. Die until a six: 6 rolls.", "Three dice sum, fair 10.5, a 2-wide market: 9.5 bid, 11.5 offered."],
     when: "Every trading-interview brainteaser starts here. Say the fair value first, then the market; the width is your confidence.",
-    trap: "The higher of two dice is not 3.5 and not 7. Count it: P(max = k) = (2k - 1) / 36, and the answer is 161 / 36 = 4.47.",
+    trap: "The higher of two dice is not 3.5 and not 7. Count it: P(max = k) = (2k - 1) / 36, and the answer is 161 / 36 = 4.47. And two heads in a row is a different question from the first heads: it takes 6 flips on average, not 2.",
   },
   {
     id: "count_the_cases", title: "Conditional probability by counting", families: ["conditional_small:0", "conditional_small:1", "conditional_small:2", "conditional_small:3", "conditional_small:4"],
@@ -200,7 +214,7 @@ export const LESSONS = [
   },
   {
     id: "spread_and_error", title: "Mean, variance, standard error, z", families: ["mean_variance_quick:mean", "mean_variance_quick:var", "standard_error:se", "standard_error:t", "z_score:z", "z_score:tail"],
-    method: "Mean: add and divide. Variance: average squared distance from the mean; its square root is the standard deviation. Standard error of the mean: sd / sqrt(n). Z: (x - mean) / sd. One-sided tails: 1 sd 16%, 2 sd 2.5%, 3 sd 0.15%.",
+    method: "Mean: add and divide. Variance: average squared distance from the mean; its square root is the standard deviation. Standard error of the mean: sd / sqrt(n). Z: (x - mean) / sd. The 68-95-99.7 rule: within 1, 2, 3 sd of the mean. Halved for one side, the tails are 1 sd 16%, 2 sd 2.5%, 3 sd 0.15%. Two standard errors from zero is the usual bar for \"probably real\".",
     examples: ["Returns 10, -5, 4, -1: mean 2. Squared distances 64, 49, 4, 9 = 126, / 4 = 31.5. Sd 5.6.", "Sd 4% over 36 months: SE 4 / 6 = 0.67%. A 1% mean is 1.5 standard errors from zero: not yet convincing.", "Mean 5, sd 10, month at -15: z = -2, about 2.5% of months this bad if returns were normal."],
     when: "Judging a backtest or a track record. The standard error is the question \"could this be luck?\" in one number.",
     trap: "Sample versus population variance. Dividing by n - 1 instead of n matters for small samples; say which one you used.",
@@ -209,7 +223,7 @@ export const LESSONS = [
     id: "sqrt_time", title: "Square root of time, Sharpe, and correlation", families: ["vol_sqrt_time:daily", "vol_sqrt_time:monthly", "sharpe_quick:annual", "sharpe_quick:monthly", "correlation_sign:sign", "correlation_sign:portfolio"],
     method: "Independent moves add in variance, so volatility grows with the square root of time: daily x 16 (sqrt of 252), monthly x 3.46 (sqrt of 12). Sharpe = (return - risk-free) / vol, and a monthly Sharpe annualises by sqrt(12). For two equal-vol assets in equal weights, portfolio vol = vol x sqrt((1 + correlation) / 2).",
     examples: ["Daily vol 1%: annual about 16%.", "Return 12%, risk-free 4%, vol 16%: Sharpe 0.5. Monthly Sharpe 0.3: annual 1.04.", "Two assets at 10% vol, correlation 0: portfolio vol 7.1%. Correlation 1: 10%. Correlation -1: zero."],
-    when: "Any question about a strategy's risk or its track record, and the first question anyone asks about a backtest.",
+    when: "Any question about a strategy's risk or its track record, and the first question anyone asks about a backtest. Sharpe bands: below 0.5 is ordinary, 1 is good, above 2 is suspicious until proven. Correlation 0 between two equal assets cuts volatility by about 30%.",
     trap: "Multiplying vol by 252 instead of its square root. Variance scales with time; volatility does not.",
   },
   {

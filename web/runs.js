@@ -5,13 +5,13 @@ import { item, exactEquity } from "./core.js";
 function pokerRun(rng) {
   const q1 = DRILLS.pot_odds(rng);
   const need = q1.answer;
-  const flush = item({ key: "outs_equity:9:1", drill: "outs_equity", family: "outs_equity:1", answer: (9 / 46) * 100, abs_tol: 1.2,
+  const flush = item({ key: "outs_equity:9:1", drill: "outs_equity", family: "outs_equity:1", answer: (9 / 46) * 100, abs_tol: 2.2,
     prompt: "Same hand. You hold a flush draw, 9 outs, and there is one card to come. What is your chance of hitting? Answer in %.",
-    explanation: "9 / 46 = 19.6%. Rule of 2 says 18%. | With one card to come there are 46 unseen cards." });
+    explanation: "Rule of 2: 9 x 2 = 18%, and 18 is marked correct. Exact: 9 / 46 = 19.6%. | With one card to come there are 46 unseen cards. In the room, say the rule first, then the exact number if they push." });
   const call = (9 / 46) * 100 >= need;
   const q3 = item({ key: `interview_call:${q1.key}`, drill: "pot_odds_decision", family: "pot_odds_decision", choices: ["Call", "Fold"], answer: call ? 0 : 1, abs_tol: 0,
     prompt: `You need to win ${need.toFixed(1)}% of the time and you hit ${((9 / 46) * 100).toFixed(1)}% of the time. Call or fold?`,
-    explanation: `${((9 / 46) * 100).toFixed(1)}% ${call ? "is above" : "is below"} ${need.toFixed(1)}%, so ${call ? "call" : "fold"}. | Judge the decision, not the result.` });
+    explanation: `${((9 / 46) * 100).toFixed(1)}% (rule of 2: 18%) ${call ? "is above" : "is below"} ${need.toFixed(1)}%, so ${call ? "call" : "fold"}. Both numbers give the same answer. | Judge the decision, not the result.` });
   return [q1, flush, q3];
 }
 

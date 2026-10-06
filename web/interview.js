@@ -1,5 +1,5 @@
 // Poker questions the way an interviewer follows up after "teach me pot odds".
-import { item, fmt, r2, NUM, PCT, USD, POTS, potAndCall, exactEquity, DRAW_NAMES } from "./core.js";
+import { item, fmt, r2, NUM, PCT, USD, POTS, potAndCall, exactEquity, ruleEquity, DRAW_NAMES } from "./core.js";
 
 const BET_SIZES = [[1, 3, "third"], [1, 2, "half"], [2, 3, "twothirds"], [3, 4, "twothirds"], [1, 1, "pot"], [3, 2, "over"], [2, 1, "over"]];
 function betFor(rng, family) {
@@ -44,7 +44,10 @@ export function pot_odds_decision(rng) {
     cards = rng.choice([1, 2]);
     need = call / (pot + call);
     hit = exactEquity(outs, cards) / 100;
-    if (Math.abs(hit - need) > 0.02) break;
+    // The rule of 4 and 2 (and its correction above 8 outs) must reach the same call-or-fold as the exact math,
+    // so a student using the rule in the room is never marked wrong.
+    const estimates = [hit, ruleEquity(outs, cards), ruleEquity(outs, cards, true)];
+    if (Math.abs(hit - need) > 0.02 && estimates.every((e) => Math.abs(e - need) > 0.01 && (e >= need) === (hit >= need))) break;
   }
   const call_ = hit >= need;
   const name = DRAW_NAMES[outs];
@@ -52,7 +55,7 @@ export function pot_odds_decision(rng) {
     key: `pot_odds_decision:${pot}:${call}:${outs}:${cards}`, drill: "pot_odds_decision",
     prompt: `There is $${fmt(pot)} in the pot and it costs $${fmt(call)} to call. You hold ${name}, ${outs} outs, with ${cards === 1 ? "one card" : "two cards"} to come and no more betting after this. Call or fold?`,
     choices: ["Call", "Fold"], answer: call_ ? 0 : 1,
-    explanation: `You need ${(need * 100).toFixed(1)}% (${call} / ${pot + call}). You hit ${(hit * 100).toFixed(1)}% (rule of ${cards === 2 ? 4 : 2}: about ${outs * (cards === 2 ? 4 : 2)}%). ${(hit * 100).toFixed(1)} ${call_ ? "is above" : "is below"} ${(need * 100).toFixed(1)}, so ${call_ ? "call" : "fold"}. | Judge the decision, not the result. "No more betting" matters: with more streets, implied odds could change the answer.`,
+    explanation: `You need ${(need * 100).toFixed(1)}% (${call} / ${pot + call}). Rule of ${cards === 2 ? 4 : 2}: ${outs} x ${cards === 2 ? 4 : 2} = ${outs * (cards === 2 ? 4 : 2)}%. Exact: ${(hit * 100).toFixed(1)}%. Either way it is ${call_ ? "above" : "below"} ${(need * 100).toFixed(1)}%, so ${call_ ? "call" : "fold"}. | Judge the decision, not the result. "No more betting" matters: with more streets, implied odds could change the answer.`,
     abs_tol: 0,
   });
 }
@@ -85,7 +88,9 @@ export function price_out_draw(rng) {
   const outs = rng.choice([4, 8, 9]);
   const hit = exactEquity(outs, 2) / 100;
   const minBet = (hit * pot) / (1 - 2 * hit);
+  const ruleHit = ruleEquity(outs, 2);
+  const ruleBet = (ruleHit * pot) / (1 - 2 * ruleHit);
   const name = DRAW_NAMES[outs];
   return item({ key: `price_out_draw:${pot}:${outs}`, drill: "price_out_draw", prompt: `The pot is $${fmt(pot)} on the flop. Your opponent has ${name}, ${outs} outs, and will see both cards if they call. What is the smallest bet that makes their call a mistake on pot odds alone? ${USD}`, answer: minBet,
-    explanation: `They hit ${(hit * 100).toFixed(1)}%. A bet b gives them b / (${pot} + 2b); set that above ${(hit * 100).toFixed(1)}% and b > ${fmt(r2(minBet))}. | Rule of thumb: a flush draw is priced out by anything above about half pot; a gutshot by a quarter pot.`, rel_tol: 0.05, abs_tol: 1 });
+    explanation: `They hit ${(hit * 100).toFixed(1)}% exact, or ${fmt(ruleHit * 100)}% by the rule of 4. A bet b gives them b / (${pot} + 2b); set that above their chance and b > ${fmt(r2(minBet))} exact, ${fmt(r2(ruleBet))} by the rule. Both are marked correct. | When they see both cards for one bet: a gutshot is priced out by about a quarter pot, an open-ender by about 0.85 pot, and a flush draw only by more than the pot.`, rel_tol: 0.05, abs_tol: Math.abs(ruleBet - minBet) + 1 });
 }

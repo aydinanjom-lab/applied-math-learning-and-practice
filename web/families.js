@@ -99,7 +99,7 @@ export const FAMILIES = {
   "pot_odds_bet:pot": F("Pot-sized bet", "bet / (pot + 2 x bet): a pot-sized bet needs 33%.", "pot_odds_three_ways"),
   "pot_odds_bet:over": F("Overbet", "bet / (pot + 2 x bet): 1.5x pot needs 37.5%, 2x pot needs 40%.", "pot_odds_three_ways"),
   bluff_break_even: F("Bluff break-even", "bet / (pot + bet). Half-pot bluff needs a fold one time in three.", "pot_odds_three_ways"),
-  pot_odds_decision: F("Call or fold", "Compare chance to hit with call / (pot + call).", "pot_odds_three_ways"),
+  pot_odds_decision: F("Call or fold", "Chance to hit by the rule of 4 and 2 against call / (pot + call). The rule and the exact math always agree here.", "pot_odds_three_ways"),
   // quick
   percent_of: F("Percent of a number", "Take 10%, then scale. 1% for the awkward ones.", "percent_scaling"),
   fraction_to_decimal: F("Fraction to decimal", "Know 1/n, multiply by the top.", "fractions_worth_knowing"),
@@ -126,7 +126,7 @@ export const FAMILIES = {
   lbo_return: F("Buyout yearly return", "Anchors: 2x in 5 years is 15%, 3x in 5 is 25%; rule of 72 for doubling.", "rule_of_72"),
   lbo_moic: F("Buyout multiple", "equity out / equity in."),
   accretion: F("Accretive or dilutive", "All-stock: buyer's P/E above target's is accretive.", "multiples_and_yields"),
-  interest_coverage: F("Interest coverage", "EBITDA / interest."),
+  interest_coverage: F("Interest coverage", "EBITDA / interest. Below about 2x is tight, above about 4x is comfortable.", "coverage_ratios"),
   bank_spread: F("Bank spread", "(lend rate - deposit rate) x loans."),
   // accounting
   balance_sheet: F("Balance sheet", "equity = assets - liabilities."),
@@ -163,7 +163,7 @@ export const FAMILIES = {
 Object.assign(FAMILIES, {
   count_outs: F("Count the outs", "Add the draws, subtract cards counted twice.", "count_the_outs"),
   pot_odds_ratio: F("Pot odds as a ratio", "pot to call; percent is 1 / (ratio + 1).", "pot_odds_three_ways"),
-  price_out_draw: F("Pricing out a draw", "bet / (pot + 2 x bet) must beat the draw's chance.", "pot_odds_three_ways"),
+  price_out_draw: F("Pricing out a draw", "bet / (pot + 2 x bet) must beat the draw's chance. Rule of 4 is fine: gutshot about a quarter pot, open-ender about 0.85 pot, flush draw more than the pot.", "price_out_draw"),
   near_100: F("Near-100 products", "front: one number minus the other's gap; back: gaps multiplied.", "near_100"),
   halve_double: F("Halve and double", "halve the even one, double the other.", "halve_and_double"),
   split_multiply: F("Split the hard one", "tens x b, then ones x b, add.", "split_the_hard_one"),

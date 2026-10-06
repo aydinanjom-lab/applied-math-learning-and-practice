@@ -56,6 +56,8 @@ export function potAndCall(rng) {
   }
 }
 export const exactEquity = (outs, cards) => (cards === 1 ? (outs / 46) * 100 : (1 - comb2(47 - outs) / comb2(47)) * 100);
+// Rule of 4 and 2 as a fraction; corrected subtracts (outs - 8) points with two cards to come.
+export const ruleEquity = (outs, cards, corrected = false) => (outs * (cards === 2 ? 4 : 2) - (corrected && cards === 2 && outs > 8 ? outs - 8 : 0)) / 100;
 export const DRAW_NAMES = { 2: "a pocket pair hoping for a set", 4: "a gutshot straight draw", 6: "two overcards", 8: "an open-ended straight draw", 9: "a flush draw", 12: "a flush draw plus a gutshot", 15: "a flush draw plus an open-ended straight draw" };
 
 export const familyOf = (it) => it.family ?? it.drill;
