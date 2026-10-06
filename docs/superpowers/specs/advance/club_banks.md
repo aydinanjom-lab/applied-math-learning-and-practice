@@ -121,6 +121,19 @@ Nothing new. Launch here first.
 - Payback: "$1.2M investment saves $40K a month. Payback?" 30 months.
 - Percent of percent: "40% of customers, 25% of those convert. Share of total?" 10%.
 
+### Poker club (added Oct 6)
+No current IU poker club was confirmed by search (the only hit was a 2008 article); check beINvolved. If one exists, it is the best first real club: no application conflict, the owner's strongest subject, and he can explain every drill.
+
+**Pack:** interview, poker, prob, plus **new: Poker, advanced** (players already know pot odds; they want the next layer).
+- Minimum defense: "Villain bets half pot. How often must you continue so a bluff can't auto-profit?" 1 / 1.5 = 67%.
+- Bluff break-even: "You bet half pot. How often must they fold?" 0.5 / 1.5 = 33%.
+- Bluff-to-value: "Pot-sized river bet. Bluffs per value bet to stay balanced?" They get 2 to 1, so 1 bluff per 2 value bets.
+- Stack-to-pot: "Effective stacks 300, flop pot 100. SPR?" 3.
+- Blockers: "Board has an ace. AK combos left?" 3 x 4 = 12.
+- Semi-bluff EV: "Bet 50 into 100. They fold 40%; when called you win 30% of a 200 pot. EV?" 0.4 x 100 + 0.6 x (0.3 x 200 - 0.7 x 50) = +55.
+
+Framing: math practice only, no stakes, same as the betting set. Check IU's rules on poker events in student organizations before co-hosting anything with chips.
+
 ## What tailoring per club needs in the app
 
 Today a club only changes two things: whether the betting set is hidden, and which set a club session uses. A real pack needs three small changes:
