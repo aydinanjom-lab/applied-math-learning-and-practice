@@ -7,7 +7,7 @@ import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLev
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store } from "./store.js";
 import { parseRoute, TABS } from "./router.js";
-import { normalizeCode, suggestCode, shortCode, newSeed, clubSessionItems, clubSessionLink, joinLink, summaryRows, holdJoin, takeJoin } from "./clubs.js";
+import { normalizeCode, suggestCode, shortCode, newSeed, clubSessionItems, clubSessionLink, joinLink, summaryRows, holdJoin, takeJoin, PACKS, MAX_CLUB_SETS, cleanSets, mergeClubSets, clubSetIds, boostClubWeights } from "./clubs.js";
 import { SyncClient, mergeProgress } from "./sync.js";
 import { SUPABASE } from "./config.js";
 import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
@@ -68,9 +68,15 @@ async function startSync() {
     }
   } catch (e) { syncState.error = e.message ?? String(e); }
 }
+// The club list is cached so club sets still shape sessions offline.
+const COHORT_CACHE = "napkin_cohorts";
+try { syncState.cohorts = JSON.parse(localStorage.getItem(COHORT_CACHE) || "[]"); } catch { syncState.cohorts = []; }
 async function loadCohorts() {
-  if (!syncState.user) { syncState.cohorts = []; return; }
-  try { syncState.cohorts = (await sync.myCohorts()) ?? []; } catch (e) { syncState.error = e.message ?? String(e); }
+  if (!syncState.user) { syncState.cohorts = []; try { localStorage.removeItem(COHORT_CACHE); } catch {} return; }
+  try {
+    syncState.cohorts = (await sync.myCohorts()) ?? [];
+    try { localStorage.setItem(COHORT_CACHE, JSON.stringify(syncState.cohorts)); } catch {}
+  } catch (e) { syncState.error = e.message ?? String(e); }
 }
 // A club can hide the betting set for its members (under-21 members, adviser objections).
 const visibleSets = () => (syncState.cohorts.some((c) => c.hide_betting) ? ALL_SETS.filter((g) => g !== "betting") : ALL_SETS);
@@ -89,10 +95,13 @@ function countUp(node, target, format = (x) => String(Math.round(x))) {
 const CHECK = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true"); s.innerHTML = '<path d="M4 12.5 L9.5 18 L20 6.5"/>'; return s; };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
-const ALL_SETS = ["interview", "poker", "quick", "banking", "accounting", "valuation", "walks", "deals", "prob", "rates", "betting", "moose", "novyx", "energy"];
-const prioritySets = () => setsForAreas(store.priorities?.areas ?? []);
+const ALL_SETS = ["interview", "poker", "pokeradv", "quick", "banking", "accounting", "valuation", "walks", "deals", "prob", "rates", "betting", "moose", "novyx", "energy"];
+const hideBetting = () => syncState.cohorts.some((c) => c.hide_betting);
+const prioritySets = () => mergeClubSets(setsForAreas(store.priorities?.areas ?? []), syncState.cohorts).filter((g) => GROUPS[g] && !(g === "betting" && hideBetting()));
 const rungOf = (set) => rungDetail(store.attempts, set, store.stamps, store.starredKeys());
-const unlockedSet = (g) => !UNLOCK_AFTER[g] || store.unlocked.includes(g) || rungOf(UNLOCK_AFTER[g]).rung >= 4;
+const unlockedSet = (g) => !UNLOCK_AFTER[g] || store.unlocked.includes(g) || clubSetIds(syncState.cohorts).has(g) || rungOf(UNLOCK_AFTER[g]).rung >= 4;
+// Sessions and the diagnostic draw only from open sets; a locked set waits for its unlock.
+const openPrioritySets = () => prioritySets().filter(unlockedSet);
 
 const el = (tag, attrs = {}, ...children) => {
   const node = document.createElement(tag);
@@ -130,6 +139,12 @@ const page = (active, ...nodes) => { screen(...nodes); showTabs(active); };
 const back = (path) => el("button", { class: "link", onclick: () => go(path) }, "Back");
 const display = (it) => (it.choices ? it.choices[it.answer] : fmt(Math.round(it.answer * 10) / 10));
 const nice = (name) => name.replace(/_/g, " ");
+// A drill's readable name is the start of its definition ("Minimum defense frequency: ..."), else its id.
+const drillTitle = (d) => { const head = (DEFINITIONS[d] ?? "").split(":")[0]; return head && head.length <= 40 ? head : nice(d); };
+// Kinded drills file their lessons under "drill:kind"; take the first one found.
+// The definition without the name repeated, when the name came from it.
+const drillDef = (d) => { const t = DEFINITIONS[d] ?? ""; const i = t.indexOf(":"); return drillTitle(d) !== nice(d) && i > 0 ? t.slice(i + 1).trim().replace(/^./, (c) => c.toUpperCase()) : t; };
+const lessonForDrill = (d) => LESSON_BY_FAMILY[d] ?? Object.entries(LESSON_BY_FAMILY).find(([f]) => f.startsWith(d + ":"))?.[1] ?? null;
 const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], store.starredKeys())];
 
 // ---------- home ----------
@@ -184,7 +199,7 @@ function welcome(existing = null, onDone = null) {
 }
 
 function diagnosticOffer() {
-  const sets = prioritySets().slice(0, 3);
+  const sets = openPrioritySets().slice(0, 3);
   screen(
     el("h1", {}, "Six-minute check"),
     el("p", {}, `Eight typed questions from each of: ${sets.map((s) => GROUP_LABELS[s][0]).join(", ")}. Twenty seconds each. It places you honestly and stars what you miss, so your first real session goes where it counts.`),
@@ -225,7 +240,7 @@ function today() {
       dUntil !== null && dUntil >= 0 ? el("span", { class: dUntil <= 14 ? "star" : "" }, `Interview in ${dUntil} day${dUntil === 1 ? "" : "s"}`) : null,
       due ? el("span", { class: "star" }, "Sunday check due") : null),
     el("button", { class: "primary", onclick: () => startSession("today", state.mode, state.count) }, `Start today's ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`),
-    el("p", { class: "muted small", style: "margin:8px 0 0" }, `Starred first, then your priorities: ${pri.map((s) => GROUP_LABELS[s][0]).join(", ")}.`),
+    el("p", { class: "muted small", style: "margin:8px 0 0" }, `Starred first, then ${clubSetIds(syncState.cohorts).size ? "your club's sets and your priorities" : "your priorities"}: ${pri.filter(unlockedSet).map((s) => GROUP_LABELS[s][0]).join(", ")}.`),
     el("div", { class: "chips" }, modeChip("say", "Say it"), modeChip("type", "Type it"), el("span", { class: "chipgap" }), countChip(5), countChip(10), countChip(20)),
     toLearn.length ? el("button", { class: "card notice action", style: "margin-top:16px", onclick: () => go("#/lessons") },
       el("span", { class: "choice" }, el("span", { class: "title" }, `Lessons · ${toLearn.length} to learn`), el("span", { class: "muted small" }, toLearn.slice(0, 3).map((t) => (FAMILIES[t.family] ?? { name: nice(t.drill) }).name).join(" · ") + (toLearn.length > 3 ? " · more" : "")))) : null,
@@ -288,9 +303,9 @@ function setPage(g) {
     ...modeCountRows(() => setPage(g)),
     el("h2", {}, `Drills (${drills.length})`),
     el("div", { class: "stack" }, drills.map((d) => el("div", { class: "card", style: "padding:12px 14px" },
-      el("div", { class: "titlerow" }, el("span", { class: "title" }, nice(d)), el("span", { class: "muted small num" }, stat(d))),
-      el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
-      LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => go(`#/lesson/${LESSON_BY_FAMILY[d]}`) }, "One-minute method") : null))),
+      el("div", { class: "titlerow" }, el("span", { class: "title" }, drillTitle(d)), el("span", { class: "muted small num" }, stat(d))),
+      el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, drillDef(d)),
+      lessonForDrill(d) ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => go(`#/lesson/${lessonForDrill(d)}`) }, "One-minute method") : null))),
     el("div", { style: "height:16px" }),
     back("#/practice")
   );
@@ -334,11 +349,19 @@ function clubPage(opts = {}) {
   const newCode = el("input", { type: "text", "aria-label": "new club code", placeholder: "KELLEY-FIR-F26", autocapitalize: "characters", autocomplete: "off", style: "font-size:18px" });
   nameInput.addEventListener("input", () => { if (!newCode.dataset.touched) newCode.value = suggestCode(nameInput.value) ?? ""; });
   newCode.addEventListener("input", () => { newCode.dataset.touched = "1"; });
+  const selectStyle = "font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); width: 100%";
+  const packPick = el("select", { "aria-label": "starting question sets", style: selectStyle },
+    el("option", { value: "" }, "No club sets: members keep their own priorities"),
+    ...Object.entries(PACKS).map(([k, p]) => el("option", { value: k }, `${p.title}: ${p.sub}`)));
   const createNow = async () => {
     const code = normalizeCode(newCode.value); const name = nameInput.value.trim();
     if (name.length < 2 || !code) { status.textContent = "Give the club a name and a code of 4 to 20 letters, digits, or dashes."; return; }
     status.textContent = "Creating…";
-    try { await sync.createCohort(name, code); await loadCohorts(); go(`#/club`); } catch (e) { status.textContent = `Could not create: ${e.message ?? e}`; }
+    try {
+      const made = await sync.createCohort(name, code);
+      if (packPick.value && made?.id) await sync.setCohortSets(made.id, PACKS[packPick.value].sets);
+      await loadCohorts(); go(made?.id ? `#/club/${made.id}` : "#/club");
+    } catch (e) { status.textContent = `Could not create: ${e.message ?? e}`; }
   };
   const mine = syncState.cohorts;
   page("you",
@@ -349,7 +372,7 @@ function clubPage(opts = {}) {
     el("form", { onsubmit: (e) => { e.preventDefault(); joinNow(); } }, codeInput, el("div", { style: "height:8px" }), el("button", { type: "submit" }, "Join")),
     el("h2", {}, "Lead a club"),
     el("p", { class: "muted small" }, "You get a code to share, a shared ten-question session with a four-letter code, and a page of aggregate numbers. Never anyone's individual score."),
-    el("form", { onsubmit: (e) => { e.preventDefault(); createNow(); } }, nameInput, el("div", { style: "height:8px" }), newCode, el("div", { style: "height:8px" }), el("button", { type: "submit" }, "Create the club")),
+    el("form", { onsubmit: (e) => { e.preventDefault(); createNow(); } }, nameInput, el("div", { style: "height:8px" }), newCode, el("div", { style: "height:8px" }), packPick, el("div", { style: "height:8px" }), el("button", { type: "submit" }, "Create the club")),
     status,
     back("#/you"));
 }
@@ -373,7 +396,25 @@ function clubDetail(id) {
       .catch(() => boardBox.replaceChildren(el("p", { class: "muted small" }, "Board unavailable.")));
   }
   const setPick = el("select", { "aria-label": "set for the club session", style: "font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); width: 100%" },
-    ...visibleSets().filter((g) => g !== "betting" || !c.hide_betting).map((g) => el("option", { value: g }, GROUP_LABELS[g][0])));
+    ...(c.sets?.length ? c.sets : visibleSets()).filter((g) => GROUP_LABELS[g] && (g !== "betting" || !c.hide_betting)).map((g) => el("option", { value: g }, GROUP_LABELS[g][0])));
+  // Question sets: a leader starts from a preset or picks sets one by one, in order.
+  const draft = [...(c.sets ?? [])];
+  const packBox = el("div", {});
+  const saveSets = async () => {
+    status.textContent = "Saving…";
+    try { await sync.setCohortSets(id, cleanSets(draft, ALL_SETS)); await refresh(); } catch (e) { status.textContent = `Could not save: ${e.message ?? e}`; }
+  };
+  const drawPack = () => packBox.replaceChildren(
+    el("p", { class: "muted small" }, `Members get these sets first in their Today session for their first two weeks, then after their own priorities. Locked sets open for members. Up to ${MAX_CLUB_SETS}, in the order you tap them.`),
+    el("div", { class: "chips" }, el("span", { class: "muted small" }, "Start from:"), ...Object.entries(PACKS).map(([, p]) => el("button", { class: "chip", onclick: () => { draft.splice(0, draft.length, ...p.sets); drawPack(); } }, p.title)),
+      el("button", { class: "chip", onclick: () => { draft.splice(0, draft.length); drawPack(); } }, "None")),
+    el("div", { class: "stack", style: "margin-top:8px" }, ...ALL_SETS.filter((g) => g !== "betting" || !c.hide_betting).map((g) => {
+      const at = draft.indexOf(g);
+      return el("button", { "aria-pressed": String(at >= 0), onclick: () => { if (at >= 0) draft.splice(at, 1); else if (draft.length < MAX_CLUB_SETS) draft.push(g); drawPack(); } },
+        el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, GROUP_LABELS[g][0]), at >= 0 ? el("span", { class: "badge" }, String(at + 1)) : null), el("span", { class: "muted small" }, GROUP_LABELS[g][1])));
+    })),
+    el("button", { class: "primary", style: "margin-top:8px", onclick: saveSets }, draft.length ? `Save ${draft.length} club set${draft.length === 1 ? "" : "s"}` : "Save with no club sets"));
+  drawPack();
   const newSession = async () => {
     status.textContent = "Creating…";
     try {
@@ -391,6 +432,9 @@ function clubDetail(id) {
     el("p", { class: "muted small num" }, `Code ${c.code} · ${c.members} member${c.members === 1 ? "" : "s"} · `, copyButton(joinLink(c.code, location.origin + location.pathname), "Copy join link")),
     c.is_owner ? el("h2", {}, "This week, in aggregate") : null,
     c.is_owner ? summaryBox : null,
+    c.sets?.length ? el("p", { class: "small" }, `This club practises: ${c.sets.filter((g) => GROUP_LABELS[g]).map((g) => GROUP_LABELS[g][0]).join(", ")}.`) : null,
+    c.is_owner ? el("h2", {}, "Question sets") : null,
+    c.is_owner ? packBox : null,
     c.is_owner ? el("h2", {}, "Club session") : null,
     c.is_owner ? el("div", {}, setPick, el("div", { style: "height:8px" }), el("button", { class: "primary", onclick: newSession }, "New club session"), sessionBox) : null,
     c.is_owner ? el("h2", {}, "Settings") : null,
@@ -449,7 +493,7 @@ function account() {
         el("p", { class: "muted small num" }, syncState.error ? `Last sync failed: ${syncState.error}` : syncState.last ? `Last synced ${syncState.last.toLocaleTimeString()}` : "Not synced yet"),
         el("div", { class: "row" },
           el("button", { onclick: async () => { await pullAndMerge(); account(); } }, "Sync now"),
-          el("button", { onclick: async () => { await sync.signOut(); syncState.user = null; store.onSave = null; go("#/you"); } }, "Sign out"))),
+          el("button", { onclick: async () => { await sync.signOut(); syncState.user = null; store.onSave = null; await loadCohorts(); go("#/you"); } }, "Sign out"))),
       el("p", { class: "muted small" }, "Signing out leaves this browser's copy in place. Your account copy is untouched."),
       back("#/you")
     );
@@ -559,13 +603,13 @@ function about() {
 let session = null;
 
 function startSession(group, mode, count, opts = {}) {
-  const pri = prioritySets();
+  const pri = openPrioritySets();
   // "Later" drills join a set once it is Solid: they rest on a derivation worth earning first.
   const withLater = (g) => (LATER[g] && rungOf(g).rung >= 4 ? [...GROUPS[g], ...LATER[g]] : GROUPS[g]);
   const names = group === "today" ? pri.flatMap((s) => GROUPS[s]) : withLater(group);
   const urgent = daysUntil(store.priorities?.interviewDate ?? null);
   if (group === "today" && mode === "say" && urgent !== null && urgent >= 0 && urgent <= 3 && !opts.items) mode = "type";
-  const items = opts.items ?? (group === "today" ? todayQueue(store, pri, count, weightsFor(store, pri, store.priorities?.interviewDate ?? null), makeRng()) : buildQueue(store, names, count, makeRng()));
+  const items = opts.items ?? (group === "today" ? todayQueue(store, pri, count, boostClubWeights(weightsFor(store, pri, store.priorities?.interviewDate ?? null), syncState.cohorts), makeRng()) : buildQueue(store, names, count, makeRng()));
   const intros = group === "today" ? [] : names.filter((n) => !store.introShown.includes(n));
   if (location.hash !== "#/session") history.pushState(null, "", "#/session");
   session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", run: opts.run ?? null,
@@ -606,10 +650,10 @@ function glossary() {
       el("h2", {}, GROUP_LABELS[g][0]),
       SET_NOTES[g] ? el("p", { class: "star small" }, SET_NOTES[g]) : null,
       el("div", { class: "stack" }, GROUPS[g].map((d) => el("div", { class: "card", style: "padding:12px 14px" },
-        el("div", { class: "title" }, nice(d)),
-        el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, DEFINITIONS[d]),
+        el("div", { class: "title" }, drillTitle(d)),
+        el("div", { class: "small muted", style: "font-weight:400;margin-top:2px" }, drillDef(d)),
         FAMILIES[d]?.method ? el("div", { class: "small muted", style: "font-weight:400;margin-top:4px" }, el("strong", {}, "Method: "), FAMILIES[d].method) : null,
-        LESSON_BY_FAMILY[d] ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => go(`#/lesson/${LESSON_BY_FAMILY[d]}`) }, "Read the one-minute method") : null,
+        lessonForDrill(d) ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => go(`#/lesson/${lessonForDrill(d)}`) }, "Read the one-minute method") : null,
         noteBox(d)))),
     ]),
     el("div", { style: "height:16px" }),
@@ -822,7 +866,7 @@ function startWeekly() {
 // ---------- interview run ----------
 // ---------- diagnostic ----------
 function startDiagnostic() {
-  const sets = prioritySets().slice(0, 3);
+  const sets = openPrioritySets().slice(0, 3);
   const items = buildDiagnostic(sets, makeRng());
   session = null;
   startSession("today", "diag", items.length, { items, kind: "diag", diagSets: sets });

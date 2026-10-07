@@ -135,6 +135,14 @@ Claude Code skills applied while producing this buildout plan, and the ones the 
 | `test-driven-development` | Club codes, deterministic shared sessions, summary wording with the five-member floor, held join. 84 tests. |
 | `run` (browser driving, mocked backend) | Join link signed out, create club, leader page, new session, member join by link, run the shared session, tags on attempts, same first question on a second device, board opt-in. |
 
+## Used for club question sets and the advanced poker set (2026-10-07)
+
+| Skill | What it was used for |
+|---|---|
+| `test-driven-development` | Pack rules (known sets, order, cap, two-week lead, double weight), eight poker drills checked against second formulas, geometric sizing replayed street by street, rule coverage. 100 tests. |
+| `systematic-debugging` | Monte Carlo equity check: the first run gave nonsense (88 vs AK at 8%); the cause was tiebreak lists of different lengths. Fixed and checked against known matchups before using any anchor. |
+| `run` (browser driving, mocked backend) | Leader creates a poker club from the preset and edits it; member joins by link; Today leads with club sets, includes the normally locked advanced set, excludes locked Deal math; offline cache; set page names and lesson links. |
+
 ## Still to use
 
 | Skill | When |

@@ -4,7 +4,7 @@ import { masteryLevel } from "./progress.js";
 
 export const AREAS = {
   finance: { title: "Finance interview numbers", sub: "Valuation, cost of capital, buyouts, the three statements, deal math.", sets: ["banking", "accounting", "valuation", "walks", "deals"] },
-  poker: { title: "Poker as an interview answer", sub: "Pot odds, outs, bet sizing, call or fold.", sets: ["interview", "poker"] },
+  poker: { title: "Poker as an interview answer", sub: "Pot odds, outs, bet sizing, call or fold, and the deeper game once that is solid.", sets: ["interview", "poker", "pokeradv"] },
   quick: { title: "Fast mental math", sub: "Percent tricks, fast multiplying and dividing, fractions.", sets: ["quick"] },
   business: { title: "My business numbers", sub: "Margins, payback, break-even, pipeline.", sets: ["moose", "novyx"] },
   energyodds: { title: "Energy and odds", sub: "Barrels and netbacks; odds formats and fair chance, math only.", sets: ["energy", "betting"] },

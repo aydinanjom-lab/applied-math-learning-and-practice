@@ -57,6 +57,37 @@ export function summaryRows(s) {
   ];
 }
 
+// Club question sets: presets a leader can start from, and how they mix with a member's own priorities.
+export const MAX_CLUB_SETS = 8;
+export const CLUB_FIRST_DAYS = 14;
+export const PACKS = {
+  finance: { title: "Finance recruiting", sub: "IB and markets first rounds", sets: ["banking", "accounting", "valuation", "walks", "deals", "quick"] },
+  markets: { title: "Markets and trading", sub: "S&T, research, and trading clubs", sets: ["rates", "prob", "valuation", "quick"] },
+  poker: { title: "Poker club", sub: "Advanced poker math first, then the basics", sets: ["pokeradv", "poker", "interview", "prob"] },
+  quant: { title: "Quant and actuarial", sub: "Probability, statistics, bonds", sets: ["prob", "rates", "quick"] },
+};
+// Keep only known set ids, no repeats, at most eight, in the order given.
+export function cleanSets(list, known) {
+  const ok = new Set(known);
+  return [...new Set((list ?? []).filter((s) => ok.has(s)))].slice(0, MAX_CLUB_SETS);
+}
+// Club sets lead for a member's first two weeks in a club, then follow their own priorities.
+export function mergeClubSets(personal, cohorts, now = Date.now()) {
+  const clubs = (cohorts ?? []).filter((c) => c.sets?.length);
+  if (!clubs.length) return [...personal];
+  const recent = clubs.some((c) => !c.joined_at || now - Date.parse(c.joined_at) < CLUB_FIRST_DAYS * 86400000);
+  const clubSets = clubs.flatMap((c) => c.sets);
+  return [...new Set(recent ? [...clubSets, ...personal] : [...personal, ...clubSets])];
+}
+// In a member's first two weeks, club sets count double in the Today mix, so most questions come from the club's pack.
+export function boostClubWeights(weights, cohorts, now = Date.now()) {
+  const recent = (cohorts ?? []).filter((c) => c.sets?.length && (!c.joined_at || now - Date.parse(c.joined_at) < CLUB_FIRST_DAYS * 86400000));
+  const boosted = new Set(recent.flatMap((c) => c.sets));
+  return Object.fromEntries(Object.entries(weights).map(([set, w]) => [set, boosted.has(set) ? w * 2 : w]));
+}
+// A set in any of your clubs' packs is open to you, whatever its usual unlock rule.
+export const clubSetIds = (cohorts) => new Set((cohorts ?? []).flatMap((c) => c.sets ?? []));
+
 // A join code captured from a link before sign-in is held locally until the account exists.
 export const PENDING_KEY = "napkin_join";
 export function holdJoin(storage, code) { try { storage.setItem(PENDING_KEY, code); } catch {} }

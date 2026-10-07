@@ -103,6 +103,7 @@ export class SyncClient {
   joinCohort(code) { return this.rpc("join_cohort", { p_code: code }).then((r) => (Array.isArray(r) ? r[0] : r)); }
   createCohort(name, code) { return this.rpc("create_cohort", { p_name: name, p_code: code }).then((r) => (Array.isArray(r) ? r[0] : r)); }
   setCohortFlags(id, hideBetting, leaderboard) { return this.rpc("set_cohort_flags", { p_cohort: id, p_hide_betting: hideBetting ?? null, p_leaderboard: leaderboard ?? null }); }
+  setCohortSets(id, sets) { return this.rpc("set_cohort_sets", { p_cohort: id, p_sets: sets }); }
   setBoardOptIn(id, optIn, firstName) { return this.rpc("set_board_opt_in", { p_cohort: id, p_opt_in: optIn, p_first_name: firstName ?? null }); }
   leaveCohort(id) { return this.rpc("leave_cohort", { p_cohort: id }); }
   deleteCohort(id) { return this.rpc("delete_cohort", { p_cohort: id }); }

@@ -7,6 +7,7 @@ import * as interview from "./interview.js";
 import * as finance from "./finance.js";
 import * as quick2 from "./quick2.js";
 import * as quant from "./quant.js";
+import * as pokeradv from "./pokeradv.js";
 export { makeRng, fmt, parseAnswer, isCorrect, familyOf, familyFromKey, FAMILIES };
 
 // ======================= poker =======================
@@ -482,7 +483,7 @@ export const DRILLS = {
   rebooking_revenue, unrealized_revenue, rate_card, pipeline_revenue, lifetime_value,
   american_to_prob, decimal_to_prob, fraction_to_decimal_odds, remove_vig, bet_ev, kelly,
   oil_revenue, netback, decline, reserve_life, breakeven_price,
-  ...interview, ...finance, ...quick2, ...quant,
+  ...interview, ...finance, ...quick2, ...quant, ...pokeradv,
 };
 
 export const GROUPS = {
@@ -495,6 +496,7 @@ export const GROUPS = {
   moose: ["contribution_margin", "payback_months", "break_even_units", "discount_trap", "roas_to_return", "customer_value"],
   novyx: ["rebooking_revenue", "unrealized_revenue", "rate_card", "pipeline_revenue", "lifetime_value"],
   energy: ["oil_revenue", "netback", "decline", "reserve_life", "breakeven_price"],
+  pokeradv: ["mdf", "bluff_ratio", "spr", "geo_sizing", "board_combos", "semibluff_ev", "semibluff_breakeven", "preflop_anchor"],
   valuation: ["ufcf", "tv_exit_multiple", "tv_perpetuity_vs_exit", "implied_growth", "mid_year_direction", "comps_implied_ev", "multiple_translate", "pe_from_ev_ebitda"],
   walks: ["walk_depreciation_cash", "walk_inventory_writedown", "walk_sell_inventory", "walk_capex_cash", "walk_debt_raise", "walk_buyback"],
   deals: ["sources_uses_equity", "leverage_turns", "cash_sweep_year", "moic_from_irr", "exit_multiple_breakeven", "irr_sensitivity_direction", "value_creation_split"],
@@ -516,6 +518,7 @@ export const GROUP_LABELS = {
   moose: ["Mighty Moose numbers", "Margin, payback, break-even, the discount trap, ad returns"],
   novyx: ["Novyx numbers", "Rebooking, revenue gaps, rate cards, pipeline, customer value"],
   energy: ["Houston energy basics", "Barrels, netback, decline, reserve life, break-even price"],
+  pokeradv: ["Poker, advanced", "Defense and bluff frequencies, SPR and bet sizing, board combos, semi-bluffs, preflop equities"],
   valuation: ["Valuation pieces", "Free cash flow, the two terminal values, mid-year, comps, implied share price"],
   walks: ["Accounting walks", "One event, three statements, one number at the end"],
   deals: ["Deal math", "Sources and uses, debt tranches, the sweep, IRR shortcuts, what moves returns"],
@@ -525,9 +528,17 @@ export const GROUP_LABELS = {
 };
 
 // A set unlocks when the one before it is Solid on every drill. Override allowed.
-export const UNLOCK_AFTER = { betting: "poker", deals: "banking", rates: "deals" };
+export const UNLOCK_AFTER = { betting: "poker", pokeradv: "poker", deals: "banking", rates: "deals" };
 
 export const DEFINITIONS = {
+  mdf: "Minimum defense frequency: pot / (pot + bet), how often you must continue so a bluff with any two cards cannot profit.",
+  bluff_ratio: "Balanced bluffing: the share of your river bets that are bluffs should equal the caller's pot odds, bet / (pot + 2 x bet).",
+  spr: "Stack-to-pot ratio: the smaller stack divided by the pot. It says how much of a commitment one strong pair is.",
+  geo_sizing: "Geometric sizing: the same pot-fraction bet on each street that gets all the money in by the river.",
+  board_combos: "Combos left: the ways an opponent can hold a hand once you remove every card you can see.",
+  semibluff_ev: "Semi-bluff: a bet with a draw. It wins when they fold now or when you hit later.",
+  semibluff_breakeven: "Break-even folds for a semi-bluff: your equity when called lowers the folds the bet needs.",
+  preflop_anchor: "Preflop equity anchors: the all-in matchups worth knowing cold, such as the coin flip.",
   ufcf: "Unlevered free cash flow: EBIT x (1 - tax) + D&A - capex - increase in working capital. The cash a DCF discounts.",
   tv_exit_multiple: "Terminal value by exit multiple: final-year EBITDA times the multiple peers trade at.",
   tv_perpetuity_vs_exit: "Terminal value by perpetuity: final cash flow x (1 + g) / (rate - g). Cross-check it against the exit-multiple number.",

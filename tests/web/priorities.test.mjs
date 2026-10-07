@@ -15,7 +15,7 @@ test("six areas cover every set exactly once except 'all'", () => {
 });
 
 test("setsForAreas keeps area order and falls back to interview", () => {
-  assert.deepEqual(setsForAreas(["finance", "poker"]), ["banking", "accounting", "valuation", "walks", "deals", "interview", "poker"]);
+  assert.deepEqual(setsForAreas(["finance", "poker"]), ["banking", "accounting", "valuation", "walks", "deals", "interview", "poker", "pokeradv"]);
   assert.deepEqual(setsForAreas([]), ["interview"]);
 });
 

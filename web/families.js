@@ -2,6 +2,21 @@
 // `lesson` names the lesson that teaches the method, when one exists.
 const F = (name, method, lesson) => ({ name, method, lesson });
 export const FAMILIES = {
+  // poker, advanced
+  ...Object.fromEntries(["third", "half", "twothirds", "pot", "over"].map((k) => [`mdf:${k}`, F(`Defend against a ${{ third: "third-pot", half: "half-pot", twothirds: "two-thirds-pot", pot: "pot-sized", over: "1.5x-pot" }[k]} bet`, "pot / (pot + bet). Third 75%, half 67%, two-thirds 60%, pot 50%, 1.5x 40%.", "defense_and_bluffs")])),
+  ...Object.fromEntries(["third", "half", "twothirds", "pot", "over"].map((k) => [`bluff_ratio:${k}`, F(`Bluff share for a ${{ third: "third-pot", half: "half-pot", twothirds: "two-thirds-pot", pot: "pot-sized", over: "1.5x-pot" }[k]} bet`, "bet / (pot + 2 x bet). Third 20%, half 25%, two-thirds 29%, pot 33%, 1.5x 37.5%.", "defense_and_bluffs")])),
+  spr: F("Stack-to-pot ratio", "Smaller stack / pot. Under about 3, one pair commits; above about 10, it does not.", "stacks_and_sizing"),
+  geo_sizing: F("Geometric bet sizing", "(1 + 2f)^streets = 1 + 2 x SPR. Two pot bets cover SPR 4, three cover SPR 13.", "stacks_and_sizing"),
+  "board_combos:pair": F("Pair combos with cards showing", "Unseen of the rank, choose 2: 3 left is 3, 2 left is 1.", "combos_on_board"),
+  "board_combos:unpaired": F("Two-rank combos with cards showing", "Unseen of one rank x unseen of the other.", "combos_on_board"),
+  semibluff_ev: F("Semi-bluff value", "fold x pot + call x (equity x final pot - bet).", "semibluff_math"),
+  semibluff_breakeven: F("Semi-bluff break-even folds", "loss when called / (pot + loss when called). No equity: bet / (pot + bet).", "semibluff_math"),
+  "preflop_anchor:aa_kk": F("AA against KK", "About 82%.", "preflop_anchors"),
+  "preflop_anchor:pair_vs_lower": F("Pair against a lower pair", "About 80%.", "preflop_anchors"),
+  "preflop_anchor:pair_vs_overs": F("Pair against two overcards", "About 55%, the coin flip.", "preflop_anchors"),
+  "preflop_anchor:dominated": F("Dominated kicker", "AK against AQ: about 74%.", "preflop_anchors"),
+  "preflop_anchor:overs_vs_unders": F("Two overs against two unders", "About 60%.", "preflop_anchors"),
+  "preflop_anchor:pair_vs_one_over": F("Pair against one over, one under", "About 70%.", "preflop_anchors"),
   // valuation
   ufcf: F("Unlevered free cash flow", "EBIT x (1 - t) + D&A - capex - increase in working capital.", "ufcf_build"),
   tv_exit_multiple: F("Terminal value by exit multiple", "Final-year EBITDA x the peer multiple.", "terminal_value_two_ways"),

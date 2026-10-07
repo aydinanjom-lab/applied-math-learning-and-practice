@@ -44,3 +44,38 @@ test("summary rows: the floor hides everything but the member count", () => {
   assert.deepEqual(rows[5], ["Most missed", "wacc (9 of 20)"]);
   assert.deepEqual(rows[7], ["Average placed level", "Banking interview numbers 2.5"]);
 });
+
+import { PACKS, MAX_CLUB_SETS, cleanSets, mergeClubSets, clubSetIds, boostClubWeights } from "../../web/clubs.js";
+
+test("packs only name sets that exist, and fit the database limit", () => {
+  for (const [id, p] of Object.entries(PACKS)) {
+    assert.ok(p.title && p.sets.length && p.sets.length <= MAX_CLUB_SETS, id);
+    for (const s of p.sets) { assert.ok(GROUPS[s], `${id}: ${s}`); assert.match(s, /^[a-z0-9]+$/); }
+  }
+  assert.deepEqual(PACKS.poker.sets.slice(0, 2), ["pokeradv", "poker"]);
+});
+
+test("cleanSets drops unknown ids and repeats, keeps order, caps at eight", () => {
+  assert.deepEqual(cleanSets(["poker", "nope", "poker", "prob"], Object.keys(GROUPS)), ["poker", "prob"]);
+  assert.equal(cleanSets(Object.keys(GROUPS), Object.keys(GROUPS)).length, MAX_CLUB_SETS);
+  assert.deepEqual(cleanSets(null, ["a"]), []);
+});
+
+test("club sets lead for the first two weeks, then follow personal priorities", () => {
+  const now = Date.parse("2026-10-07T12:00:00Z");
+  const club = (days) => [{ sets: ["pokeradv", "poker"], joined_at: new Date(now - days * 86400000).toISOString() }];
+  assert.deepEqual(mergeClubSets(["banking", "poker"], club(3), now), ["pokeradv", "poker", "banking"]);
+  assert.deepEqual(mergeClubSets(["banking", "poker"], club(20), now), ["banking", "poker", "pokeradv"]);
+  assert.deepEqual(mergeClubSets(["banking"], [{ sets: [] }], now), ["banking"]);
+  assert.deepEqual(mergeClubSets(["banking"], [], now), ["banking"]);
+  assert.ok(clubSetIds(club(1)).has("pokeradv"));
+});
+
+test("club sets count double in the Today mix for the first two weeks only", () => {
+  const now = Date.parse("2026-10-07T12:00:00Z");
+  const w = { pokeradv: 3, banking: 3 };
+  const at = (days) => [{ sets: ["pokeradv"], joined_at: new Date(now - days * 86400000).toISOString() }];
+  assert.deepEqual(boostClubWeights(w, at(2), now), { pokeradv: 6, banking: 3 });
+  assert.deepEqual(boostClubWeights(w, at(30), now), w);
+  assert.deepEqual(boostClubWeights(w, [], now), w);
+});

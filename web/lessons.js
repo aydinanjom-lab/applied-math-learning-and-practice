@@ -233,6 +233,42 @@ export const LESSONS = [
     when: "Consulting-style and some banking superday questions. The grade is for the method and the self-correction, not the number.",
     trap: "Precision. Round every step to one or two digits, or you lose the thread by step three.",
   },
+  // ---------- poker, advanced ----------
+  {
+    id: "defense_and_bluffs", title: "How often to defend, how often to bluff", families: ["mdf:third", "mdf:half", "mdf:twothirds", "mdf:pot", "mdf:over", "bluff_ratio:third", "bluff_ratio:half", "bluff_ratio:twothirds", "bluff_ratio:pot", "bluff_ratio:over"],
+    method: "Defending: continue at least pot / (pot + bet) of the time, the minimum defense frequency. Bluffing: make bet / (pot + 2 x bet) of your river bets bluffs, which is exactly the caller's pot odds.",
+    examples: ["Half-pot bet: defend 67%, bluff 25% of the time you bet.", "Pot-sized bet: defend 50%, bluff 33%, which is 1 bluff for every 2 value bets.", "Third pot: defend 75%, bluff 20%. Two-thirds: 60% and 29%. 1.5x pot: 40% and 37.5%."],
+    when: "Any spot where the question is how often, not what this exact hand does. Bigger bets let you defend less and bluff more.",
+    trap: "These are defaults against an unknown player. Against someone who never bluffs, fold more than the minimum; against someone who never folds, bluff less.",
+  },
+  {
+    id: "stacks_and_sizing", title: "Stacks, SPR, and bet sizing", families: ["spr", "geo_sizing"],
+    method: "SPR is the smaller stack divided by the pot. To get all in over several streets with the same-sized bet, solve (1 + 2f)^streets = 1 + 2 x SPR for the pot fraction f.",
+    examples: ["$300 and $500 stacks, $60 pot: effective $300, SPR 5.", "SPR 4, two streets left: (1 + 2f)^2 = 9, so f = 1, two pot-sized bets.", "SPR 13, three streets: (1 + 2f)^3 = 27, so f = 1 again. SPR 3.5 over three streets: half-pot bets."],
+    when: "Planning a hand from the flop. Guideline: under about 3, one strong pair is usually enough to get all the money in; above about 10, it usually is not.",
+    trap: "Using your own stack when the other player has less. Only the effective stack, the smaller one, can go in.",
+  },
+  {
+    id: "combos_on_board", title: "Combos once cards are showing", families: ["board_combos:pair", "board_combos:unpaired"],
+    method: "Start from the full count: 6 for a pair, 16 for two ranks. Remove every card you can see, on the board or in your hand, then count again.",
+    examples: ["One king visible: KK has 3 combos left. Two visible: 1.", "One ace visible: AK has 3 x 4 = 12. One ace and one king: 3 x 3 = 9.", "Two aces visible: AK has 2 x 4 = 8."],
+    when: "Reading a range on the flop and river. Your blockers change what they can have, and that changes whether a call or a bluff works.",
+    trap: "Forgetting your own hand. The cards in front of you are as gone as the ones on the board.",
+  },
+  {
+    id: "semibluff_math", title: "Semi-bluff math", families: ["semibluff_ev", "semibluff_breakeven"],
+    method: "A semi-bluff wins two ways. Value = fold x pot + call x (equity x final pot - your bet). The folds it needs = loss when called / (pot + loss when called).",
+    examples: ["Bet 50 into 100, they fold 40%, you hit 30% when called: 0.4 x 100 + 0.6 x (0.3 x 200 - 50) = 40 + 6 = +46.", "Bet 100 into 100 with 20% when called: called part is 0.2 x 300 - 100 = -40, so you need 40 / 140 = 29% folds.", "With no equity it is the pure bluff number: a pot-sized bet needs 50% folds."],
+    when: "Any draw you are thinking of betting instead of calling. Fold equity plus draw equity is why aggressive draws beat passive ones.",
+    trap: "Counting the final pot and also subtracting the loss twice. Either win equity x final pot and subtract your bet once, or win equity x (pot + their call) and lose (1 - equity) x your bet. Not both.",
+  },
+  {
+    id: "preflop_anchors", title: "Preflop equities to know cold", families: ["preflop_anchor:aa_kk", "preflop_anchor:pair_vs_lower", "preflop_anchor:pair_vs_overs", "preflop_anchor:dominated", "preflop_anchor:overs_vs_unders", "preflop_anchor:pair_vs_one_over"],
+    method: "Learn six matchups and estimate everything else from the nearest one.",
+    examples: ["Pair against two overcards: about 55%, the coin flip. 22 is 53%, QQ is 57%.", "Pair against a lower pair: about 80%. AA against KK: about 82%.", "Dominated kicker, AK against AQ: about 74%. Two overs against two unders: about 60%. Pair against one over and one under: about 70%."],
+    when: "All-in decisions before the flop, and checking whether a call is close or clear.",
+    trap: "Suits and connectedness move these a few points. AK suited does about 3 points better than offsuit. The anchors are for estimating, not for quoting to the decimal.",
+  },
 ];
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((l) => [l.id, l]));
 export const LESSON_BY_FAMILY = {};

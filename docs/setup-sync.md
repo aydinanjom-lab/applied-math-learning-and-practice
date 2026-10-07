@@ -42,6 +42,10 @@ Run `supabase/clubs.sql` in the SQL Editor the same way as the first file. It ad
 
 Links: join `https://napkinprep.com/#/join/CLUB-CODE`, session `https://napkinprep.com/#/s/MXQ7`. A join link opened before sign-in holds the code locally and finishes the join after the email link.
 
+## Club question sets (third SQL file)
+
+Run `supabase/clubs_sets.sql` in the SQL Editor after `clubs.sql`. It adds a `sets` column to clubs, returns it with each member's join date, and adds `set_cohort_sets` for the leader. Until it runs, the leader page's "Question sets" save fails with a function-not-found message and members' sessions ignore club sets. The editor will warn about destructive operations: the only drops are two functions being recreated with a new return shape; no data is touched.
+
 ## Sign-in email through Resend (do this before inviting a club)
 
 Supabase's built-in sender allows 2 emails an hour for the whole project. With a custom sender the limit is 30 an hour and adjustable.

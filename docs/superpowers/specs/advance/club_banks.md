@@ -121,22 +121,24 @@ Nothing new. Launch here first.
 - Payback: "$1.2M investment saves $40K a month. Payback?" 30 months.
 - Percent of percent: "40% of customers, 25% of those convert. Share of total?" 10%.
 
-### Poker club (added Oct 6)
+### Poker club (added Oct 6, built Oct 7)
 No current IU poker club was confirmed by search (the only hit was a 2008 article); check beINvolved. If one exists, it is the best first real club: no application conflict, the owner's strongest subject, and he can explain every drill.
 
-**Pack:** interview, poker, prob, plus **new: Poker, advanced** (players already know pot odds; they want the next layer).
+**Built.** Preset "Poker club" = Poker, advanced; Poker math; Interview set; Probability and statistics. The new set is `web/pokeradv.js`: eight drills (minimum defense, bluff share, SPR, geometric sizing, board combos, semi-bluff value, semi-bluff break-even folds, preflop equity anchors), five lessons, tests in `tests/web/pokeradv.test.mjs`. Preflop anchors were checked with a 150,000-deal simulation. Outside a club the set unlocks when Poker math is Solid; inside a club pack it is open at once.
+
+The sample drills as first planned:
 - Minimum defense: "Villain bets half pot. How often must you continue so a bluff can't auto-profit?" 1 / 1.5 = 67%.
 - Bluff break-even: "You bet half pot. How often must they fold?" 0.5 / 1.5 = 33%.
 - Bluff-to-value: "Pot-sized river bet. Bluffs per value bet to stay balanced?" They get 2 to 1, so 1 bluff per 2 value bets.
 - Stack-to-pot: "Effective stacks 300, flop pot 100. SPR?" 3.
 - Blockers: "Board has an ace. AK combos left?" 3 x 4 = 12.
-- Semi-bluff EV: "Bet 50 into 100. They fold 40%; when called you win 30% of a 200 pot. EV?" 0.4 x 100 + 0.6 x (0.3 x 200 - 0.7 x 50) = +55.
+- Semi-bluff EV: "Bet 50 into 100. They fold 40%; when called you win 30% of a 200 pot. EV?" 0.4 x 100 + 0.6 x (0.3 x 200 - 50) = +46. (Corrected Oct 7: the first draft subtracted the bet twice and said +55.)
 
 Framing: math practice only, no stakes, same as the betting set. Check IU's rules on poker events in student organizations before co-hosting anything with chips.
 
 ## What tailoring per club needs in the app
 
-Today a club only changes two things: whether the betting set is hidden, and which set a club session uses. A real pack needs three small changes:
+**Built Oct 7** (`supabase/clubs_sets.sql`, `web/clubs.js`, leader page). Presets: Finance recruiting, Markets and trading, Poker club, Quant and actuarial. Club sets lead the Today list and count double in its mix for a member's first two weeks; sets in a club pack are open whatever their usual unlock; the club-session picker shows only the pack; the club list is cached for offline use. The original plan:
 
 1. **A `sets` list on the club.** The leader picks the pack when creating the club, starting from a preset like "FIR" or "Trading club". One column in `cohorts`, one picker on the leader page.
 2. **Members' Today queue includes the club's sets.** It merges with their own priorities, club sets first for the first two weeks. This is a change to `priorities.js` with tests.

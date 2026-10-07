@@ -51,6 +51,7 @@ test("every rule of thumb named in an explanation is taught in a lesson", () => 
   const text = LESSONS.map((l) => [l.method, ...l.examples, l.when, l.trap].join(" ")).join(" ").toLowerCase();
   const rules = ["outs x 4", "72", "2x in 5 years is about 15%", "bet / (pot + 2 x bet)", "37.5%", "below about 2x", "0.09", "$365M a year is $1M a day",
     "most of the total", "about a quarter pot", "0.85 pot", "more than the pot", "chance it finishes in the money", "6 flips", "68-95-99.7",
-    "Two standard errors", "Sharpe bands", "about 30%", "daily x 16", "sqrt((1 + correlation) / 2)", "1 / p", "about 5%", "convexity", "16%"];
+    "Two standard errors", "Sharpe bands", "about 30%", "daily x 16", "sqrt((1 + correlation) / 2)", "1 / p", "about 5%", "convexity", "16%",
+    "pot / (pot + bet)", "bet / (pot + 2 x bet)", "1 bluff for every 2 value bets", "under about 3", "two pot-sized bets", "SPR 13", "full count", "fold x pot", "about 55%", "about 82%", "about 74%", "about 60%", "about 70%"];
   for (const r of rules) assert.ok(text.includes(r.toLowerCase()), `no lesson teaches: ${r}`);
 });
