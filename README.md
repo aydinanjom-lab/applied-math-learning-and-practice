@@ -28,7 +28,7 @@ Every time this repository changes, Netlify updates the page on its own.
 
 then open http://localhost:8000 in a browser.
 
-**First visit:** three quick screens (what you are here for, an optional interview date, minutes per day), then an optional six-minute typed check that places you per set and stars what you miss. Your "Today" session draws from your priority sets, weighted to where you are weak and how close the interview is. Change priorities any time from the home screen. **Install:** on a phone, Add to Home Screen gives an icon and offline start.
+**First visit:** three quick screens (what you are here for, an optional interview date, questions per day), then an optional six-minute placement test that places you per set and stars what you miss. Your "Today" session draws from your priority sets, weighted to where you are weak and how close the interview is. Change priorities any time from the home screen. **Install:** on a phone, Add to Home Screen gives an icon and offline start; after two sessions Today shows how, once. Priorities can add a daily 10-minute reminder to your calendar (a plain .ics file, no notifications server).
 
 **Layout:** five tabs. Today (one start button, status, cards only when something is due), Practice (every set with its level, a page per set, interview runs), Lessons (to-learn first, all lessons, glossary, index card), Progress (levels, starred, stats, export), You (account, priorities, club, about). Clubs: a leader creates a club and shares a join link; members run shared ten-question sessions from a four-letter code; the leader sees seven aggregate numbers and nothing per person, and nothing at all until five members have practised. A leader can give a club its own question sets, starting from presets such as Poker club or Finance recruiting; members get those sets first for their first two weeks. See `docs/setup-sync.md`. Every page has an address (`#/practice`, `#/set/banking`, `#/lesson/ufcf_build`) so the back button and shared links work.
 
@@ -42,8 +42,9 @@ answers only (Unplaced to Cold; the top four rungs need a passed ten-question le
 betting math unlocks once poker is Solid, deal math once banking is Solid, and rates and options once deal math is Solid, each with an "unlock anyway" link. Three rates drills (duration, put-call parity, delta hedging) join their set only once it is Solid. The betting set is math practice
 only: odds are generated, and nothing is ever recorded as a bet.
 
-**Your data:** saved inside the browser you use, no trackers. Export from the Stats page. **Sync between devices** is optional and off until you connect a free Supabase project (about five minutes, see `docs/setup-sync.md`). Then Account on the home screen signs you in by an emailed link, and your laptop and phone share one record. Your laptop and your phone each keep their own
-record. Practice on one device, or treat the other as scratch. Clearing the browser's site data wipes it.
+**Your data:** saved inside the browser you use, no trackers. Export from the Progress tab. **Sync between devices** is optional (see `docs/setup-sync.md`): You, then Account, signs you in by an emailed link, and your laptop and phone share one record. Signed out, each browser keeps its own record, and clearing the browser's site data wipes it.
+
+**New sets ship through a gate** (`web/content.js`): a draft plays only at `#/draft/<set>` and stays off Today, Practice, placement, club packs and the Lessons list until the owner passes its explain-it check, saying the method for every kind of question out loud. **M&A, deeper** (offer price, goodwill, ownership, accretion as a percent, breakeven synergies, the highest non-dilutive cash price) is the first draft. `#/voice` is a hidden test page for spoken answers, not yet used in sessions.
 
 ## Tests
 

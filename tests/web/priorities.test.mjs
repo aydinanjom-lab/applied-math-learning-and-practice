@@ -2,13 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AREAS, setsForAreas, urgency, weightsFor, todayQueue, daysUntil } from "../../web/priorities.js";
 import { Store } from "../../web/store.js";
-import { makeRng, GROUPS } from "../../web/drills.js";
+import { makeRng, GROUPS, DRAFT_GROUPS } from "../../web/drills.js";
 
 const fakeStorage = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
 
-test("six areas cover every set exactly once except 'all'", () => {
+test("six areas cover every set exactly once except 'all', drafts included", () => {
   const covered = Object.values(AREAS).flatMap((a) => a.sets);
-  const expected = Object.keys(GROUPS).filter((g) => g !== "all");
+  const expected = [...Object.keys(GROUPS), ...Object.keys(DRAFT_GROUPS)].filter((g) => g !== "all");
   assert.deepEqual([...covered].sort(), expected.sort());
   assert.equal(Object.keys(AREAS).length, 6);
   for (const a of Object.values(AREAS)) assert.ok(a.title && a.sub);

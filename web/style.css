@@ -185,4 +185,5 @@ textarea.note:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .lastnote { margin: 8px 0 0; font-size: 14px; color: var(--ok); }
 .clock { margin: 0 0 10px; }
-button.primary .sub { display: block; font-size: 14px; font-weight: 500; margin-top: 2px; }
+button .sub { display: block; font-size: 14px; font-weight: 500; margin-top: 2px; }
+button:not(.primary) .sub { color: var(--muted); }

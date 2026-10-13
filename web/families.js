@@ -2,6 +2,14 @@
 // `lesson` names the lesson that teaches the method, when one exists.
 const F = (name, method, lesson) => ({ name, method, lesson });
 export const FAMILIES = {
+  // M&A, deeper (draft until its explain-it check)
+  mna_offer_value: F("Offer price from a premium", "Share price x (1 + premium) x shares.", "mna_price_and_goodwill"),
+  mna_goodwill: F("Goodwill", "Purchase price - fair value of net assets. Fair value, not book.", "mna_price_and_goodwill"),
+  mna_ownership: F("Ownership after a stock deal", "New shares = price / buyer's share price; new / (old + new).", "mna_price_and_goodwill"),
+  mna_accretion_cash: F("Accretion %, cash deal", "(Target earnings - price x rate x (1 - tax)) / buyer earnings.", "mna_accretion_numbers"),
+  mna_accretion_stock: F("Accretion %, stock deal", "(Buyer + target earnings) / (old + new shares), against the old EPS.", "mna_accretion_numbers"),
+  mna_eps_synergies: F("Synergies to break even on EPS", "(Old EPS x combined shares - combined earnings) / (1 - tax).", "mna_accretion_numbers"),
+  mna_max_cash_price: F("Highest non-dilutive cash price", "Target earnings / (rate x (1 - tax)). Max P/E = 1 / (rate x (1 - tax)).", "mna_accretion_numbers"),
   // poker, advanced
   ...Object.fromEntries(["third", "half", "twothirds", "pot", "over"].map((k) => [`mdf:${k}`, F(`Defend against a ${{ third: "third-pot", half: "half-pot", twothirds: "two-thirds-pot", pot: "pot-sized", over: "1.5x-pot" }[k]} bet`, "pot / (pot + bet). Third 75%, half 67%, two-thirds 60%, pot 50%, 1.5x 40%.", "defense_and_bluffs")])),
   ...Object.fromEntries(["third", "half", "twothirds", "pot", "over"].map((k) => [`bluff_ratio:${k}`, F(`Bluff share for a ${{ third: "third-pot", half: "half-pot", twothirds: "two-thirds-pot", pot: "pot-sized", over: "1.5x-pot" }[k]} bet`, "bet / (pot + 2 x bet). Third 20%, half 25%, two-thirds 29%, pot 33%, 1.5x 37.5%.", "defense_and_bluffs")])),

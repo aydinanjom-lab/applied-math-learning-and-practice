@@ -8,6 +8,8 @@ import * as finance from "./finance.js";
 import * as quick2 from "./quick2.js";
 import * as quant from "./quant.js";
 import * as pokeradv from "./pokeradv.js";
+import * as mna from "./mna.js";
+import { isLive } from "./content.js";
 export { makeRng, fmt, parseAnswer, parseAnswerFor, isCorrect, familyOf, familyFromKey, FAMILIES };
 
 // ======================= poker =======================
@@ -299,7 +301,7 @@ function discount_trap(rng) {
   for (;;) { m = rng.choice([40, 50, 60, 70]); d = rng.choice([10, 15, 20, 25, 30]); if (d < m - 5) break; }
   const ans = (m / (m - d) - 1) * 100;
   return item({ key: `discount_trap:${m}:${d}`, drill: "discount_trap",
-    prompt: `Your margin is ${m}%. You run a ${d}% off sale. How many more units must you sell to make the same profit as before? ${PCT} more units.`, answer: ans,
+    prompt: `Your margin is ${m}%. You run a ${d}% off sale. By what percent must unit sales rise to make the same profit as before? ${PCT}`, answer: ans,
     explanation: `Margin after discount = ${m} - ${d} = ${m - d} points. Units needed = ${m} / ${m - d} = ${fmt(r2(m / (m - d)))}x, so ${ans.toFixed(0)}% more. | Discounts come straight out of margin, which is why a small one needs a big volume lift.`, abs_tol: 2 });
 }
 
@@ -483,10 +485,11 @@ export const DRILLS = {
   rebooking_revenue, unrealized_revenue, rate_card, pipeline_revenue, lifetime_value,
   american_to_prob, decimal_to_prob, fraction_to_decimal_odds, remove_vig, bet_ev, kelly,
   oil_revenue, netback, decline, reserve_life, breakeven_price,
-  ...interview, ...finance, ...quick2, ...quant, ...pokeradv,
+  ...interview, ...finance, ...quick2, ...quant, ...pokeradv, ...mna,
 };
 
-export const GROUPS = {
+// Every set, drafts included. GROUPS is what the app shows; DRAFT_GROUPS plays only at #/draft/<set>.
+const SETS = {
   poker: ["pot_odds", "outs_equity", "count_outs", "pot_odds_ratio", "ev_call", "implied_odds", "combos", "price_out_draw"],
   interview: ["pot_odds", "outs_equity", "count_outs", "pot_odds_bet", "bluff_break_even", "pot_odds_decision"],
   quick: ["percent_of", "reverse_percent", "percent_chain", "fraction_to_decimal", "multiply_shortcuts", "near_100", "halve_double", "split_multiply", "round_adjust", "divide_shortcuts", "unit_juggle", "growth_rate", "back_of_envelope"],
@@ -502,7 +505,10 @@ export const GROUPS = {
   deals: ["sources_uses_equity", "leverage_turns", "cash_sweep_year", "moic_from_irr", "exit_multiple_breakeven", "irr_sensitivity_direction", "value_creation_split"],
   rates: ["price_yield_direction", "current_yield", "call_payoff"],
   prob: ["dice_ev", "flips_to_first_heads", "make_a_market", "conditional_small", "bayes_100", "mean_variance_quick", "standard_error", "vol_sqrt_time", "sharpe_quick", "z_score", "correlation_sign", "market_size_steps"],
+  mna: ["mna_offer_value", "mna_goodwill", "mna_ownership", "mna_accretion_cash", "mna_accretion_stock", "mna_eps_synergies", "mna_max_cash_price"],
 };
+export const GROUPS = Object.fromEntries(Object.entries(SETS).filter(([set]) => isLive(set)));
+export const DRAFT_GROUPS = Object.fromEntries(Object.entries(SETS).filter(([set]) => !isLive(set)));
 // Drills that join a set only once it is Solid: they rest on a derivation (duration as a derivative, parity, delta) worth earning first.
 export const LATER = { rates: ["duration_price_change", "put_call_parity_number", "delta_hedge_shares"] };
 GROUPS.all = Object.values(GROUPS).flat().filter((v, i, a) => a.indexOf(v) === i);
@@ -524,13 +530,21 @@ export const GROUP_LABELS = {
   deals: ["Deal math", "Sources and uses, debt tranches, the sweep, IRR shortcuts, what moves returns"],
   rates: ["Rates and options", "Bonds the fast way, option payoffs, parity as a number, delta as shares"],
   prob: ["Probability and statistics", "Dice, coins, Bayes with 1,000 people, standard error, square root of time, Fermi"],
+  mna: ["M&A, deeper", "Offer price, goodwill, ownership after a stock deal, accretion as a percent, breakeven synergies"],
   all: ["Everything", "All sets mixed"],
 };
 
 // A set unlocks when the one before it is Solid on every drill. Override allowed.
-export const UNLOCK_AFTER = { betting: "poker", pokeradv: "poker", deals: "banking", rates: "deals" };
+export const UNLOCK_AFTER = { betting: "poker", pokeradv: "poker", deals: "banking", rates: "deals", mna: "banking" };
 
 export const DEFINITIONS = {
+  mna_offer_value: "Equity purchase price: the offer per share (today's price plus the premium) times the target's shares.",
+  mna_goodwill: "Goodwill: the price paid above the fair value of the target's net identifiable assets. It sits on the buyer's balance sheet.",
+  mna_ownership: "Ownership after a stock deal: shares issued to the target's owners divided by all shares afterwards.",
+  mna_accretion_cash: "Accretion as a percent: how much the buyer's earnings per share rise (or fall, dilution) after the deal. Cash deals cost after-tax interest.",
+  mna_accretion_stock: "Accretion in a stock deal: combined earnings over old plus new shares, compared with the buyer's EPS before.",
+  mna_eps_synergies: "Breakeven synergies: the yearly cost savings or extra profit, before tax, that make a dilutive deal leave EPS unchanged.",
+  mna_max_cash_price: "Highest non-dilutive price: the price at which after-tax interest on the debt equals the target's earnings.",
   mdf: "Minimum defense frequency: pot / (pot + bet), how often you must continue so a bluff with any two cards cannot profit.",
   bluff_ratio: "Balanced bluffing: the share of your river bets that are bluffs should equal the caller's pot odds, bet / (pot + 2 x bet).",
   spr: "Stack-to-pot ratio: the smaller stack divided by the pot. It says how much of a commitment one strong pair is.",

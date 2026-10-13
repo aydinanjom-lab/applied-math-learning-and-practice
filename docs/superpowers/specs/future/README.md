@@ -33,6 +33,12 @@ A contract lint over every drill, wrong typed answers saved for weekly triage, a
 
 Worth building, not now: first rounds rarely ask about backtests, and the statistics set already covers Sharpe and volatility at interview depth. First slice only: eight text drills on returns and risk, plus a seeded price generator. The rest (price explorer, four strategy lessons, look-ahead and overfitting demos, a self-graded whiteboard checklist) waits for winter break. Synthetic data, because index data licensing rules out the S&P 500. Nothing in the lab goes on a resume; only a backtest he writes and can whiteboard counts.
 
+## Built (Oct 13)
+
+- **Foundation:** all seven items (commits 316a048, edfe4a8). One step left for the owner: run `supabase/foundation.sql`, then add his account to `app_admins`.
+- **Path A:** one tap per right answer, the last-answer line, End early everywhere, back-swipe keeps the session, ten questions from one set, reviews at 3, 7 and 21 days, the new summary; the plain-words pass (Placement, Sunday score, Level test; "10 questions · about 5 min"; set levels only on Progress; shorter Today); the accessibility fixes; the install card and the calendar reminder. Voice is a test page only, at `#/voice`, waiting on a phone test.
+- **Path B, first slice:** contract lint (`tests/web/contract.test.mjs`), the ship gate (`web/content.js`, `#/draft/<set>`, the explain-it check), wrong typed answers saved as `given`, and **M&A, deeper** (7 kinds) as a draft. It goes live when the owner scores 7 of 7 on its explain-it check and an agent records the date in `web/content.js`.
+
 ## Decision (Oct 13)
 
 Approved order: foundation, then A, then B. Cleared stars return after 3, 7 and 21 days. The summary's main button is "Done for today". The privacy floor leaves out the leader (built that way; the owner asked for an explanation).

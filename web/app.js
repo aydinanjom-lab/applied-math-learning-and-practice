@@ -1,5 +1,5 @@
 // Screens: home -> session -> summary. Also interview run, weekly check, starred, stats, explain.
-import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, LATER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, parseAnswerFor, fmt, makeRng } from "./drills.js";
+import { GROUPS, DRAFT_GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, LATER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, parseAnswerFor, fmt, makeRng } from "./drills.js";
 import { LESSONS, LESSON_BY_ID, LESSON_BY_FAMILY } from "./lessons.js";
 import { RUNS } from "./runs.js";
 import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } from "./priorities.js";
@@ -7,6 +7,7 @@ import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLev
 import { dueReviews, upcomingReviews, REVIEW_GAPS } from "./review.js";
 import { reminderFor } from "./reminder.js";
 import { spokenNumber } from "./voice.js";
+import { CONTENT } from "./content.js";
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store, STORAGE_KEY } from "./store.js";
 import { parseRoute, TABS } from "./router.js";
@@ -116,7 +117,8 @@ function countUp(node, target, format = (x) => String(Math.round(x))) {
 const CHECK = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true"); s.innerHTML = '<path d="M4 12.5 L9.5 18 L20 6.5"/>'; return s; };
 const FEEDBACK_EMAIL = "aydin@mightymoosenutrition.com";
 const SET_NOTES = { betting: "Math practice only. The odds are made up, nothing is ever recorded as a bet, and this is not a betting tool." };
-const ALL_SETS = ["interview", "poker", "pokeradv", "quick", "banking", "accounting", "valuation", "walks", "deals", "prob", "rates", "betting", "moose", "novyx", "energy"];
+// Draft sets drop out until they go live (web/content.js).
+const ALL_SETS = ["interview", "poker", "pokeradv", "quick", "banking", "accounting", "valuation", "walks", "deals", "mna", "prob", "rates", "betting", "moose", "novyx", "energy"].filter((s) => GROUPS[s]);
 const hideBetting = () => syncState.cohorts.some((c) => c.hide_betting);
 const prioritySets = () => mergeClubSets(setsForAreas(store.priorities?.areas ?? []), syncState.cohorts).filter((g) => GROUPS[g] && !(g === "betting" && hideBetting()));
 const rungOf = (set) => rungDetail(store.attempts, set, store.stamps, store.starredKeys());
@@ -381,6 +383,75 @@ function you() {
 const copyButton = (text, label = "Copy link") => el("button", { class: "link small", onclick: async (e) => { try { await navigator.clipboard.writeText(text); e.target.textContent = "Copied"; } catch { e.target.textContent = text; } } }, label);
 
 // The owner's numbers: totals across signed-in accounts, from owner_metrics(). Not linked; open #/owner.
+// ---------- drafts and the explain-it check (#/draft/<set>) ----------
+// A draft set plays only here. It goes live when the owner says the method for every kind of question in it out
+// loud, unaided, and an agent records the date in web/content.js. Self-graded, like his FIR prep: no AI grading.
+const EXPLAIN_KEY = (set) => `napkin_explain_${set}`;
+function lastExplain(set) { try { return JSON.parse(localStorage.getItem(EXPLAIN_KEY(set)) ?? "null"); } catch { return null; } }
+function draftKinds(set) {
+  const rng = makeRng(), seen = new Map();
+  for (const d of DRAFT_GROUPS[set]) for (let k = 0; k < 40; k++) { const it = DRILLS[d](rng); const f = familyOf(it); if (!seen.has(f)) seen.set(f, it); }
+  return [...seen].map(([family, item]) => ({ family, item }));
+}
+function draftPage(set) {
+  if (!DRAFT_GROUPS[set]) return GROUPS[set] ? go(`#/set/${set}`) : page("practice", el("h1", {}, "No draft by that name"), back("#/practice"));
+  const [title, sub] = GROUP_LABELS[set] ?? [set, ""];
+  const kinds = draftKinds(set), last = lastExplain(set), c = CONTENT[set];
+  page("practice",
+    el("h1", {}, title),
+    el("p", { class: "star small" }, "Draft. Not on Today, Practice, the placement test, club packs or the Lessons list."),
+    el("p", { class: "muted" }, sub),
+    el("p", { class: "small" }, `It goes live once you pass the explain-it check: for each of the ${kinds.length} kinds of question, say how you would solve it out loud, no notes, then reveal the method and grade yourself honestly.${c?.needsReviewer ? " It also needs a reviewer to check it." : ""}`),
+    last ? el("p", { class: "muted small num" }, `Last check: ${last.line}`) : null,
+    el("div", { class: "row", style: "margin-top:12px" },
+      el("button", { class: "primary", onclick: () => explainCheck(set) }, "Explain-it check"),
+      el("button", { onclick: () => startSession(set, state.mode, state.count, { kind: "draft" }) }, "Practise it ", el("span", { class: "sub" }, questionsLabel(state.count)))),
+    el("h2", {}, "Lessons"),
+    ...LESSONS.filter((l) => l.set === set).map((l) => el("button", { class: "link", onclick: () => lesson(l.id, () => draftPage(set)) }, l.title)),
+    el("h2", {}, `Kinds of question (${kinds.length})`),
+    ...kinds.map(({ family }) => el("p", { class: "small" }, FAMILIES[family]?.name ?? nice(family))),
+    back("#/practice"));
+}
+function explainCheck(set) {
+  const kinds = draftKinds(set), said = [], notYet = [];
+  let k = 0;
+  const done = () => {
+    const line = `${set} v${CONTENT[set]?.v ?? 1}: ${said.length}/${kinds.length} explained ${dayKey(new Date())}`;
+    try { localStorage.setItem(EXPLAIN_KEY(set), JSON.stringify({ line, said: said.length, of: kinds.length })); } catch {}
+    const passed = said.length === kinds.length;
+    screen(
+      el("h1", {}, passed ? "Passed" : "Not yet"),
+      el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${said.length} of ${kinds.length} explained`),
+      el("p", { class: "small" }, passed ? "Send this line to Claude to put the set live:" : "Read the lessons for the ones below, then try again tomorrow. The set stays a draft until every kind is explained."),
+      el("p", { class: "num small", style: "font-weight:600" }, line),
+      el("button", { onclick: async () => { try { await navigator.clipboard.writeText(line); announce("Copied."); } catch {} } }, "Copy the line"),
+      notYet.length ? el("h2", {}, "Not yet") : null,
+      ...notYet.map((f) => el("p", { class: "small" }, el("strong", {}, (FAMILIES[f]?.name ?? nice(f)) + ": "), FAMILIES[f]?.method ?? "")));
+    setBar([el("button", { class: "primary", onclick: () => go(`#/draft/${set}`) }, "Back to the draft")]);
+  };
+  const show = () => {
+    if (k >= kinds.length) return done();
+    const { family, item } = kinds[k];
+    const grade = (ok) => { (ok ? said : notYet).push(family); k += 1; show(); };
+    const reveal = () => {
+      screen(
+        el("div", { class: "topbar" }, el("span", { class: "muted num" }, `Explain-it check · ${k + 1} / ${kinds.length}`)),
+        promptEl(item),
+        el("p", { class: "method" }, el("strong", {}, (FAMILIES[family]?.name ?? nice(family)) + ": "), FAMILIES[family]?.method ?? ""),
+        el("div", { class: "answer num" }, display(item)),
+        el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
+        el("p", { class: "muted small" }, "Did you say the method, unaided, in your own words? The numbers can be rough."));
+      setBar([el("div", { class: "pair" }, el("button", { class: "ok", onclick: () => grade(true) }, "✓ Said it"), el("button", { class: "miss", onclick: () => grade(false) }, "✗ Not yet"))], true);
+    };
+    screen(
+      el("div", { class: "topbar" }, el("span", { class: "muted num" }, `Explain-it check · ${k + 1} / ${kinds.length}`)),
+      promptEl(item),
+      el("p", { class: "muted" }, "Say how you would solve it, out loud, no notes. The method matters more than the exact number. Then reveal."));
+    setBar([el("button", { class: "primary", onclick: reveal }, "Reveal the method")]);
+  };
+  show();
+}
+
 // ---------- voice test (hidden, #/voice) ----------
 // A phone test before any voice feature is built: does speech recognition work in this browser, and in the
 // Home Screen app? Five fixed phrases; the result line can be copied and sent back.
@@ -669,7 +740,7 @@ function lessonsList() {
     ...flagged.map(flaggedRow),
     flagged.length ? el("h2", {}, "All lessons") : null,
     el("p", { class: "muted" }, "One minute each. Standard methods, nothing invented. Read one, then try three."),
-    el("div", { class: "stack" }, LESSONS.map((l) => el("button", { onclick: () => go(`#/lesson/${l.id}`) },
+    el("div", { class: "stack" }, LESSONS.filter((l) => !l.set || GROUPS[l.set]).map((l) => el("button", { onclick: () => go(`#/lesson/${l.id}`) },
       el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, l.title), store.lessonsRead.includes(l.id) ? el("span", { class: "badge l3" }, "read") : null), el("span", { class: "muted small" }, l.method))))),
     el("h2", {}, "Reference"),
     el("div", { class: "stack" },
@@ -738,7 +809,7 @@ let session = null;
 function startSession(group, mode, count, opts = {}) {
   const pri = openPrioritySets();
   // "Later" drills join a set once it is Solid: they rest on a derivation worth earning first.
-  const withLater = (g) => (LATER[g] && rungOf(g).rung >= 4 ? [...GROUPS[g], ...LATER[g]] : GROUPS[g]);
+  const withLater = (g) => (LATER[g] && rungOf(g).rung >= 4 ? [...GROUPS[g], ...LATER[g]] : GROUPS[g] ?? DRAFT_GROUPS[g] ?? []);
   const names = group === "today" ? pri.flatMap((s) => GROUPS[s]) : withLater(group);
   const urgent = daysUntil(store.priorities?.interviewDate ?? null);
   if (group === "today" && mode === "say" && urgent !== null && urgent >= 0 && urgent <= 3 && !opts.items) mode = "type";
@@ -748,7 +819,7 @@ function startSession(group, mode, count, opts = {}) {
   session = { group, mode, items, i: 0, results: [], intros, kind: opts.kind ?? "drill", run: opts.run ?? null,
     target: opts.target ?? null, checkSet: opts.checkSet ?? null, diagSets: opts.diagSets ?? null, club: opts.club ?? null,
     starredAtStart: new Set(items.filter((it) => store.isStarred(it)).map((it) => it.key)), starsBefore: new Set(store.starredKeys()), streakBefore: streak(store.days), todayBefore: store.days.includes(dayKey(new Date())) };
-  if (intros.length && session.kind === "drill") return introScreen();
+  if (intros.length && (session.kind === "drill" || session.kind === "draft")) return introScreen();
   nextItem();
 }
 
@@ -797,7 +868,7 @@ function glossary() {
 function header() {
   const right = session.results.filter((r) => r.correct).length;
   const item = session.items[session.i];
-  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday score" : session.kind === "lesson" ? "Try three" : session.kind === "diag" ? "Placement" : session.kind === "check" ? `${RUNGS[session.target]} level test` : null;
+  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday score" : session.kind === "lesson" ? "Try three" : session.kind === "draft" ? "Draft" : session.kind === "diag" ? "Placement" : session.kind === "check" ? `${RUNGS[session.target]} level test` : null;
   const segs = session.items.map((it, k) => el("span", { class: (k < session.i ? "done" : k === session.i ? "now" : "") + (session.starredAtStart?.has(it.key) ? " star" : "") }));
   return [el("div", { class: "topbar" },
     el("span", { class: "muted num" }, `${label ? label + " · " : ""}${session.i + 1} / ${session.items.length} · ${right} right`),
@@ -889,7 +960,9 @@ function grade(item, correct, secs, typed, replay = false) {
     if (session.diagRun[item.set] >= 4) session.skipSets.add(item.set);
   }
   const family = familyOf(item);
-  const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000, ...(session.club ? { club_session: session.club.short } : {}) };
+  // A wrong typed or picked answer is kept as typed, so wrong keys and unit slips show up in review (content.md Q3).
+  const given = !correct && typeof typed === "string" && typed !== "(time)" && typed !== DONT_KNOW ? typed.trim().slice(0, 24) : null;
+  const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000, ...(given ? { given } : {}), ...(session.club ? { club_session: session.club.short } : {}) };
   // Recorded once. A replay (back from the one-minute method) shows the same result without logging it again.
   if (!replay) {
     const wasStarred = store.isStarred(item);
@@ -939,7 +1012,7 @@ function grade(item, correct, secs, typed, replay = false) {
     el("div", { class: "explanation" }, item.explanation.replace(" | ", "\n")),
     fam.method ? el("p", { class: "method" + (correct ? " quiet" : "") }, el("strong", {}, "Method: "), fam.method) : null,
     status,
-    !correct && session.kind === "drill" ? el("div", { class: "row", style: "margin-top:8px" },
+    !correct && (session.kind === "drill" || session.kind === "draft") ? el("div", { class: "row", style: "margin-top:8px" },
       el("button", { onclick: tryOne }, "Try one like it now"),
       lessonId ? el("button", { onclick: () => lesson(lessonId, () => grade(item, correct, secs, typed, true), true) }, store.lessonsRead.includes(lessonId) ? "Read the method again" : "Read the one-minute method") : null) : null,
     el("a", { class: "muted small", style: "margin-top:12px", href: `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Napkin: wrong answer? " + item.key)}&body=${encodeURIComponent(item.prompt + "\n\nShown answer: " + display(item) + "\n\nWhat I think is right:\n")}` }, "Think this answer is wrong? Report it.")
@@ -1002,14 +1075,14 @@ function finish() {
     el("div", { style: "height:24px" })
   );
   setBar([
-    session.kind === "lesson" ? el("button", { class: "primary", onclick: () => go("#/lessons") }, "Back to lessons") : el("button", { class: "primary", onclick: () => go("#/") }, "Done for today"),
-    session.kind === "drill" ? el("button", { onclick: () => startSession(session.group, session.mode, 5) }, "5 more") : null,
+    session.kind === "lesson" ? el("button", { class: "primary", onclick: () => go("#/lessons") }, "Back to lessons") : session.kind === "draft" ? el("button", { class: "primary", onclick: () => go(`#/draft/${session.group}`) }, "Back to the draft") : el("button", { class: "primary", onclick: () => go("#/") }, "Done for today"),
+    session.kind === "drill" || session.kind === "draft" ? el("button", { onclick: () => startSession(session.group, session.mode, 5, { kind: session.kind }) }, "5 more") : null,
   ]);
 }
 
 // ---------- weekly check ----------
 function startWeekly() {
-  const started = [...new Set(store.attempts.map((a) => a.drill))].filter((d) => DRILLS[d]);
+  const started = [...new Set(store.attempts.map((a) => a.drill))].filter((d) => GROUPS.all.includes(d));
   const pool = started.length ? started : GROUPS.poker;
   const rng = makeRng();
   const items = [];
@@ -1221,6 +1294,7 @@ function dispatch() {
     case "today": return today();
     case "practice": return practice();
     case "set": return setPage(r.params.id);
+    case "draft": return draftPage(r.params.set);
     case "runs": return runsMenu();
     case "lessons": return lessonsList();
     case "lesson": return lesson(r.params.id);

@@ -2,6 +2,20 @@
 // Each: id, title, families it trains, the method in one sentence, worked examples, when it works, one trap.
 export const LESSONS = [
   {
+    id: "mna_price_and_goodwill", set: "mna", title: "M&A: what is paid, what it buys, who owns what", families: ["mna_offer_value", "mna_goodwill", "mna_ownership"],
+    method: "Price paid = share price x (1 + premium) x shares. Goodwill = price paid - fair value of the net assets. In a stock deal, new shares = price / the buyer's share price, and the target's owners hold new / (old + new).",
+    examples: ["$25 stock, 30% premium, 40M shares: 32.50 x 40 = $1,300M.", "Paid 1,300 for net assets worth 700 at fair value (600 on the books): goodwill 600. The other 100 is a write-up of the assets.", "Buyer at $50 with 100M shares pays $1,000M in stock: 20M new shares, so the target's owners hold 20 / 120 = 16.7%."],
+    when: "\"Walk me through a merger model\" starts with the price, then the purchase accounting (goodwill), then who owns the combined company.",
+    trap: "Goodwill against book value instead of fair value, and ownership as new / old shares (20%) instead of new / (old + new) (16.7%).",
+  },
+  {
+    id: "mna_accretion_numbers", set: "mna", title: "Accretion as a number, not just a direction", families: ["mna_accretion_cash", "mna_accretion_stock", "mna_eps_synergies", "mna_max_cash_price"],
+    method: "Cash deal: EPS change = (target earnings - price x rate x (1 - tax)) / buyer earnings, since the share count does not move. Stock deal: new EPS = (buyer + target earnings) / (old + new shares). Breakeven synergies fill the gap to the old EPS, grossed up for tax.",
+    examples: ["Buyer earns 200 on 100M shares, buys a target earning 60 for 1,200 with 6% debt, 25% tax: 60 - 54 = 6 more, so +3.0%.", "Stock deal: 200 on 100M shares at $40 buys 50 of earnings for 800: 20M new shares, 250 / 120 = 2.083 against 2.00, +4.2%.", "Highest cash price at 6% debt and 25% tax: earnings / 4.5%, so 45 of earnings supports 1,000, a 22x P/E."],
+    when: "After \"accretive or dilutive?\" the follow-up is \"by how much?\" and \"what synergies get it to breakeven?\". The direction rules (compare P/Es, or the earnings yield against the after-tax cost of debt) check the sign of your answer.",
+    trap: "Forgetting that interest is tax-deductible, and quoting after-tax synergies when the question asks for pre-tax.",
+  },
+  {
     id: "percent_scaling", title: "Percent: start at 10%, then scale", families: ["percent_of", "growth_rate:pct", "back_of_envelope:ebitda", "back_of_envelope:interest", "dividend_yield", "contribution_margin", "contribution_margin:pct", "rate_card"],
     method: "Find 10% by moving the decimal one place, then build the percent you need from 10%, 5% (half of it), and 1% (a tenth of it).",
     examples: ["15% of 240: 10% is 24, 5% is 12, so 36.", "35% of 80: 10% is 8, so 30% is 24, plus 5% (4) = 28.", "7% of 300: 1% is 3, so 21."],

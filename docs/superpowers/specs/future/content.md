@@ -1,6 +1,6 @@
 # Napkin future path: more questions, and a way to know they are right
 
-Proposal for approval, Oct 13, 2026. Not built.
+Proposal for approval, Oct 13, 2026. First slice built Oct 13 (Q2, minimal Q1, `given`, M&A deeper as a draft); the rest is not built.
 
 ## Thesis
 

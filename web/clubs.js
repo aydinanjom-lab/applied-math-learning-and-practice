@@ -62,12 +62,14 @@ export function summaryRows(s) {
 // Club question sets: presets a leader can start from, and how they mix with a member's own priorities.
 export const MAX_CLUB_SETS = 8;
 export const CLUB_FIRST_DAYS = 14;
-export const PACKS = {
-  finance: { title: "Finance recruiting", sub: "IB and markets first rounds", sets: ["banking", "accounting", "valuation", "walks", "deals", "quick"] },
+const PACK_LIST = {
+  finance: { title: "Finance recruiting", sub: "IB and markets first rounds", sets: ["banking", "accounting", "valuation", "walks", "deals", "mna", "quick"] },
   markets: { title: "Markets and trading", sub: "S&T, research, and trading clubs", sets: ["rates", "prob", "valuation", "quick"] },
   poker: { title: "Poker club", sub: "Advanced poker math first, then the basics", sets: ["pokeradv", "poker", "interview", "prob"] },
   quant: { title: "Quant and actuarial", sub: "Probability, statistics, bonds", sets: ["prob", "rates", "quick"] },
 };
+// Draft sets (not in GROUPS) stay out of every pack until they go live.
+export const PACKS = Object.fromEntries(Object.entries(PACK_LIST).map(([k, p]) => [k, { ...p, sets: p.sets.filter((set) => GROUPS[set]) }]));
 // Keep only known set ids, no repeats, at most eight, in the order given.
 export function cleanSets(list, known) {
   const ok = new Set(known);

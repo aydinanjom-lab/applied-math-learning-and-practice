@@ -65,3 +65,12 @@ test("stamps keep the higher rung, diagnostics union by ts, priorities local-fir
   assert.deepEqual(m.priorities, { areas: ["poker"], minutes: 5 });
   assert.deepEqual(m.checkLocks, { quick: 5, banking: 8 });
 });
+
+test("merge keeps the wrong answer saved on a miss", () => {
+  const miss = { key: "mna_goodwill:25:40:30:700:600", drill: "mna_goodwill", family: "mna_goodwill", correct: false, seconds: 9, mode: "type", ts: 100, given: "700" };
+  const m = mergeProgress({ attempts: [miss] }, { attempts: [{ ...miss, ts: 50, given: undefined, correct: true }] });
+  assert.equal(m.attempts.find((a) => a.ts === 100).given, "700");
+  const both = mergeProgress({ attempts: [miss] }, { attempts: [miss] });
+  assert.equal(both.attempts.length, 1);
+  assert.equal(both.attempts[0].given, "700");
+});

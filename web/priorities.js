@@ -3,7 +3,7 @@ import { GROUPS, DRILLS, addReviews } from "./drills.js";
 import { masteryLevel } from "./progress.js";
 
 export const AREAS = {
-  finance: { title: "Finance interview numbers", sub: "Valuation, cost of capital, buyouts, the three statements, deal math.", sets: ["banking", "accounting", "valuation", "walks", "deals"] },
+  finance: { title: "Finance interview numbers", sub: "Valuation, cost of capital, buyouts, the three statements, deal math.", sets: ["banking", "accounting", "valuation", "walks", "deals", "mna"] },
   poker: { title: "Poker as an interview answer", sub: "Pot odds, outs, bet sizing, call or fold, and the deeper game once that is solid.", sets: ["interview", "poker", "pokeradv"] },
   quick: { title: "Fast mental math", sub: "Percent tricks, fast multiplying and dividing, fractions.", sets: ["quick"] },
   business: { title: "My business numbers", sub: "Margins, payback, break-even, pipeline.", sets: ["moose", "novyx"] },
@@ -14,7 +14,8 @@ export const AREA_ORDER = ["finance", "poker", "quick", "business", "markets", "
 const INTERVIEW_SETS = new Set(["banking", "accounting", "interview", "valuation", "walks"]);
 
 export function setsForAreas(areas) {
-  const sets = (areas ?? []).flatMap((a) => AREAS[a]?.sets ?? []);
+  // Draft sets (web/content.js) are not in GROUPS, so they drop out here until they go live.
+  const sets = (areas ?? []).flatMap((a) => AREAS[a]?.sets ?? []).filter((set) => GROUPS[set]);
   return sets.length ? sets : ["interview"];
 }
 
