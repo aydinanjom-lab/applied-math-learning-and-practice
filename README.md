@@ -37,8 +37,8 @@ valuation pieces, accounting walks, deal math, rates and options, probability an
 numbers, Novyx numbers, Houston energy basics), 120 drills in all, plus 38 one-minute lessons on the standard methods, each with a
 "Try three" button. Every question has an "I don't know this" link: it marks the question wrong, stars that kind of question, and
 adds the topic with its lesson to a Lessons card on the home screen, where it stays until two clean typed reps or you tap Got it. an Interview run (the FIR question, three typed answers,
-90 seconds, pass or fail), a Sunday check (ten typed questions, scored separately), three interview runs (poker, finance, accounting), an eight-rung level per set from typed
-answers only (Unplaced to Cold; the top four rungs need a passed ten-question level check and decay if you stop practising), a daily streak with one free skip a week, and personal bests. Sports
+90 seconds, pass or fail), a Sunday score (ten typed questions, scored separately), three interview runs (poker, finance, accounting), an eight-rung level per set from typed
+answers only (Unplaced to Cold; the top four rungs need a passed ten-question level test and decay if you stop practising), a daily streak with one free skip a week, and personal bests. Sports
 betting math unlocks once poker is Solid, deal math once banking is Solid, and rates and options once deal math is Solid, each with an "unlock anyway" link. Three rates drills (duration, put-call parity, delta hedging) join their set only once it is Solid. The betting set is math practice
 only: odds are generated, and nothing is ever recorded as a bet.
 

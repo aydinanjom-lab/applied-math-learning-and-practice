@@ -73,9 +73,9 @@ export function rungDetail(attempts, set, stamps, starredKeys, now = Date.now() 
   if (rung === 0) next = "Do a typed session to get started.";
   else if (rung === 1) next = "Try every drill in the set, typed, to reach Learning.";
   else if (rung === 2) next = "Twenty typed answers at 70% or better reaches Mostly right.";
-  else if (canCheck) next = `Ready for the ${RUNGS[canCheck]} level check: ten typed questions, ${checkRequirement(canCheck).need} right.`;
+  else if (canCheck) next = `Ready for the ${RUNGS[canCheck]} level test: ten typed questions, ${checkRequirement(canCheck).need} right.`;
   else if (rung === 7) next = "Cold. Keep it that way with a typed session every two weeks.";
-  else next = rung >= 4 ? `Hold ${RUNGS[rung]}; faster and cleaner typed sessions unlock the next check.` : "More typed accuracy and speed before the next check.";
+  else next = rung >= 4 ? `Hold ${RUNGS[rung]}; faster and cleaner typed sessions unlock the next level test.` : "More typed accuracy and speed before the next level test.";
   return { rung, name: RUNGS[rung], stale, canCheck, next, supported, attempts: rows.length };
 }
 

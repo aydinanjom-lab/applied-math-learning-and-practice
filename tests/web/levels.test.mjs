@@ -60,5 +60,5 @@ test("rungDetail explains the next step", () => {
   const d = rungDetail(spread("quick", 30, true, 4), "quick", {}, [], now);
   assert.equal(d.rung, 3);
   assert.equal(d.canCheck, 4, "eligible to sit the check for Solid");
-  assert.match(d.next, /level check/i);
+  assert.match(d.next, /level test/i);
 });

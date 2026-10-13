@@ -11,7 +11,7 @@ import { parseRoute, TABS } from "./router.js";
 import { normalizeCode, suggestCode, shortCode, newSeed, clubSessionItems, clubSessionLink, joinLink, summaryRows, holdJoin, takeJoin, PACKS, MAX_CLUB_SETS, cleanSets, mergeClubSets, clubSetIds, boostClubWeights } from "./clubs.js";
 import { SyncClient, mergeProgress } from "./sync.js";
 import { SUPABASE } from "./config.js";
-import { LEVELS, groupLevel, masteryLevel, streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
+import { streak, dayKey, weekKey, weeklyCheckDue, isUnlocked, sessionBest, defaultGroupForGoal, shouldAskFeedback } from "./progress.js";
 
 const app = document.getElementById("app");
 const bar = document.createElement("div"); bar.className = "actionbar"; bar.hidden = true; document.body.append(bar);
@@ -166,11 +166,11 @@ const drillTitle = (d) => { const head = (DEFINITIONS[d] ?? "").split(":")[0]; r
 // The definition without the name repeated, when the name came from it.
 const drillDef = (d) => { const t = DEFINITIONS[d] ?? ""; const i = t.indexOf(":"); return drillTitle(d) !== nice(d) && i > 0 ? t.slice(i + 1).trim().replace(/^./, (c) => c.toUpperCase()) : t; };
 const lessonForDrill = (d) => LESSON_BY_FAMILY[d] ?? Object.entries(LESSON_BY_FAMILY).find(([f]) => f.startsWith(d + ":"))?.[1] ?? null;
-const levelOf = (group) => LEVELS[groupLevel(store.attempts, GROUPS[group], store.starredKeys())];
 
 // ---------- home ----------
 function welcome(existing = null, onDone = null) {
   const draft = { areas: [...(existing?.areas ?? [])], interviewDate: existing?.interviewDate ?? null, minutes: existing?.minutes ?? 10, when: existing?.when ?? null };
+  // minutes holds the daily question count (5, 10 or 20); the name stays for saved data.
   const finish = () => {
     store.priorities = draft;
     store.goal = draft.areas[0] === "poker" ? "poker" : draft.areas[0] === "quick" ? "general" : "interviews";
@@ -181,9 +181,9 @@ function welcome(existing = null, onDone = null) {
   };
   const step3 = () => {
     const chip = (label) => el("button", { "aria-pressed": String(draft.when === label), onclick: () => { draft.when = draft.when === label ? null : label; step3(); } }, label);
-    const mins = (m, sub) => el("button", { "aria-pressed": String(draft.minutes === m), onclick: () => { draft.minutes = m; step3(); } }, el("span", { class: "choice" }, el("span", { class: "title" }, `${m} minutes`), el("span", { class: "muted small" }, sub)));
+    const mins = (m, sub) => el("button", { "aria-pressed": String(draft.minutes === m), onclick: () => { draft.minutes = m; step3(); } }, el("span", { class: "choice" }, el("span", { class: "title" }, questionsLabel(m)), el("span", { class: "muted small" }, sub)));
     screen(
-      el("h1", {}, "How long each day?"),
+      el("h1", {}, "How many questions a day?"),
       el("div", { class: "stack" }, mins(5, "a quick hit"), mins(10, "the default"), mins(20, "when you have time")),
       el("h2", {}, "I'll do this (optional)"),
       el("div", { class: "row" }, chip("after breakfast"), chip("between classes"), chip("before bed")),
@@ -206,7 +206,7 @@ function welcome(existing = null, onDone = null) {
   };
   const step1 = () => {
     const box = (id) => el("button", { "aria-pressed": String(draft.areas.includes(id)), onclick: () => { draft.areas = draft.areas.includes(id) ? draft.areas.filter((x) => x !== id) : [...draft.areas, id]; step1(); } },
-      el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, AREAS[id].title), el("span", { class: "badge" }, draft.areas.includes(id) ? "✓" : "")), el("span", { class: "muted small" }, AREAS[id].sub)));
+      el("span", { class: "choice" }, el("span", { class: "titlerow" }, el("span", { class: "title" }, AREAS[id].title), el("span", { class: "tick" + (draft.areas.includes(id) ? " on" : ""), "aria-hidden": "true" }, draft.areas.includes(id) ? "✓" : "")), el("span", { class: "muted small" }, AREAS[id].sub)));
     screen(
       existing ? el("h1", {}, "Priorities") : el("h1", {}, "Napkin"),
       existing ? null : el("p", { style: "font-size:19px" }, "Ten minutes a day on the numbers interviewers ask. Say it out loud, then check."),
@@ -222,7 +222,7 @@ function welcome(existing = null, onDone = null) {
 function diagnosticOffer() {
   const sets = openPrioritySets().slice(0, 3);
   screen(
-    el("h1", {}, "Six-minute check"),
+    el("h1", {}, "Six-minute placement"),
     el("p", {}, `Eight typed questions from each of: ${sets.map((s) => GROUP_LABELS[s][0]).join(", ")}. Twenty seconds each. It places you honestly and stars what you miss, so your first real session goes where it counts.`),
     el("p", { class: "muted small" }, "You can skip it and take it later from the home screen.")
   );
@@ -236,8 +236,11 @@ const modeCountRows = (after) => [
   el("h2", {}, "How do you answer?"),
   el("div", { class: "row" }, chooser("mode", "say", "Say it", "Reveal, then grade yourself", after), chooser("mode", "type", "Type it", "Counts toward levels", after)),
   el("h2", {}, "How many?"),
-  el("div", { class: "row" }, [5, 10, 20].map((n) => chooser("count", n, String(n), n === 5 ? "quick hit" : n === 10 ? "about 5 min" : "long", after))),
+  el("div", { class: "row" }, [5, 10, 20].map((n) => chooser("count", n, `${n} questions`, `about ${aboutMinutes(n)} min`, after))),
 ];
+// About 30 seconds a question, with the feedback screens.
+const aboutMinutes = (n) => Math.max(2, Math.round(n / 2));
+const questionsLabel = (n) => `${n} questions · about ${aboutMinutes(n)} min`;
 const rungBadge = (r) => el("span", { class: `badge l${Math.min(4, Math.floor(r.rung / 2))}` }, r.name + (r.stale ? " · stale" : ""));
 const noticeCard = (title, text, button) => el("div", { class: "card notice", style: "margin-top:16px" }, el("div", { class: "title" }, title), el("p", { class: "muted small" }, text), button);
 
@@ -259,19 +262,17 @@ function today() {
       el("span", {}, todayDone ? "Today: done" : "Today: not yet"),
       el("span", {}, starred ? el("strong", {}, `${starred} starred`) : "Nothing starred"),
       dUntil !== null && dUntil >= 0 ? el("span", { class: dUntil <= 14 ? "star" : "" }, `Interview in ${dUntil} day${dUntil === 1 ? "" : "s"}`) : null,
-      due ? el("span", { class: "star" }, "Sunday check due") : null),
-    el("button", { class: "primary", onclick: () => startSession("today", state.mode, state.count) }, `Start today's ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`),
+      due ? el("span", { class: "star" }, "Sunday score due") : null),
+    el("button", { class: "primary", onclick: () => startSession("today", state.mode, state.count) }, "Start today ", el("span", { class: "sub" }, questionsLabel(state.count))),
     el("p", { class: "muted small", style: "margin:8px 0 0" }, `Starred first, then ${clubSetIds(syncState.cohorts).size ? "your club's sets and your priorities" : "your priorities"}: ${pri.filter(unlockedSet).map((s) => GROUP_LABELS[s][0]).join(", ")}.`),
     el("div", { class: "chips" }, modeChip("say", "Say it"), modeChip("type", "Type it"), el("span", { class: "chipgap" }), countChip(5), countChip(10), countChip(20)),
     toLearn.length ? el("button", { class: "card notice action", style: "margin-top:16px", onclick: () => go("#/lessons") },
       el("span", { class: "choice" }, el("span", { class: "title" }, `Lessons · ${toLearn.length} to learn`), el("span", { class: "muted small" }, toLearn.slice(0, 3).map((t) => (FAMILIES[t.family] ?? { name: nice(t.drill) }).name).join(" · ") + (toLearn.length > 3 ? " · more" : "")))) : null,
     dUntil !== null && dUntil < 0 ? noticeCard("Your interview date has passed", "How did it go? Set the next date, or clear it.",
       el("div", { class: "row" }, el("button", { onclick: () => go("#/priorities") }, "Set the next date"), el("button", { onclick: () => { store.priorities = { ...store.priorities, interviewDate: null }; store.save(); today(); } }, "No date for now"))) : null,
-    diagDue ? noticeCard(store.diagnostics.length ? "Time for a re-check" : "Six-minute check", store.diagnostics.length ? "It has been four weeks. Eight typed questions per priority set, to see what moved." : "Eight typed questions per priority set. Places you honestly and stars what you miss.", el("button", { class: "primary", onclick: startDiagnostic }, "Take it")) : null,
-    due ? noticeCard("Sunday check", "Ten typed questions from what you have started. This is the honest score.", el("button", { class: "primary", onclick: startWeekly }, "Do the weekly check")) : null,
-    el("h2", {}, "Your sets"),
-    el("div", { class: "stack" }, pri.map((g) => setCard(g))),
-    el("button", { class: "link", onclick: () => go("#/practice") }, "All sets and interview runs")
+    diagDue ? noticeCard(store.diagnostics.length ? "Placement, four weeks on" : "Six-minute placement", store.diagnostics.length ? "It has been four weeks. Eight typed questions per priority set, to see what moved." : "Eight typed questions per priority set. Places you honestly and stars what you miss.", el("button", { class: "primary", onclick: startDiagnostic }, "Take it")) : null,
+    due ? noticeCard("Sunday score", "Ten typed questions from what you have started. This is the honest score.", el("button", { class: "primary", onclick: startWeekly }, "Take the Sunday score")) : null,
+    el("button", { class: "link", style: "margin-top:16px", onclick: () => go("#/practice") }, "Your sets, levels and interview runs")
   );
 }
 
@@ -318,7 +319,7 @@ function setPage(g) {
     SET_NOTES[g] ? el("p", { class: "star small" }, SET_NOTES[g]) : null,
     !unlocked ? el("div", { class: "card locked" }, el("div", { class: "choice" }, el("span", { class: "title" }, "Locked"), el("span", { class: "muted small" }, `Opens when ${GROUP_LABELS[UNLOCK_AFTER[g]][0]} reaches Solid.`)), el("button", { class: "link small", onclick: () => { store.unlock(g); store.save(); setPage(g); } }, "Unlock anyway")) : null,
     r ? el("div", { class: "card" }, el("div", { class: "title" }, `Level: ${r.name}`), el("div", { class: "muted small" }, r.next),
-      r.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(g, r.canCheck) }, `Sit the ${RUNGS[r.canCheck]} check`) : locked ? el("div", { class: "muted small" }, "Check locked for 24 hours after a miss.") : null) : null,
+      r.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(g, r.canCheck) }, `Take the ${RUNGS[r.canCheck]} level test`) : locked ? el("div", { class: "muted small" }, "Level test locked for 24 hours after a miss.") : null) : null,
     store.bests[g] !== undefined ? el("p", { class: "muted small num" }, `Personal best: ${store.bests[g].toFixed(0)}s for a session.`) : null,
     LATER[g] && !(r?.rung >= 4) ? el("p", { class: "muted small" }, `${LATER[g].length} more drills join this set once it is Solid.`) : null,
     ...modeCountRows(() => setPage(g)),
@@ -330,7 +331,7 @@ function setPage(g) {
     el("div", { style: "height:16px" }),
     back("#/practice")
   );
-  if (unlocked) setBar([el("button", { class: "primary", onclick: () => startSession(g, state.mode, state.count) }, `Start · ${state.count} · ${state.mode === "say" ? "Say it" : "Type it"}`)]);
+  if (unlocked) setBar([el("button", { class: "primary", onclick: () => startSession(g, state.mode, state.count) }, "Start ", el("span", { class: "sub" }, questionsLabel(state.count)))]);
 }
 
 // You: account, priorities, club, reference, about.
@@ -341,7 +342,7 @@ function you() {
     el("h1", {}, "You"),
     el("div", { class: "stack" },
       row(syncState.user ? "Account ✓" : "Account", syncState.user ? `Signed in as ${syncState.user.email}. Progress syncs between devices.` : sync.configured ? "Sign in by email link to share progress between devices." : "Sync is not switched on for this copy.", "#/account"),
-      row("Priorities", pri ? `${(pri.areas ?? []).map((a) => AREAS[a]?.title ?? a).join(", ")}${pri.interviewDate ? ` · interview ${pri.interviewDate}` : ""} · ${pri.minutes} min` : "Pick what you are here for.", "#/priorities"),
+      row("Priorities", pri ? `${(pri.areas ?? []).map((a) => AREAS[a]?.title ?? a).join(", ")}${pri.interviewDate ? ` · interview ${pri.interviewDate}` : ""} · ${pri.minutes} a day` : "Pick what you are here for.", "#/priorities"),
       row("Club", syncState.cohorts.length ? syncState.cohorts.map((c) => c.name).join(", ") : "Join a club with a code, or lead one.", "#/club"),
       row("Poker index card", "The pot-odds answer and its follow-ups, on one card.", "#/card"),
       row("About", "What Napkin is, your data, terms, keyboard shortcuts, feedback.", "#/about"))
@@ -727,7 +728,7 @@ function glossary() {
 function header() {
   const right = session.results.filter((r) => r.correct).length;
   const item = session.items[session.i];
-  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday check" : session.kind === "lesson" ? "Try three" : session.kind === "diag" ? "Check" : session.kind === "check" ? `${RUNGS[session.target]} check` : null;
+  const label = session.kind === "interview" ? "Interview run" : session.kind === "weekly" ? "Sunday score" : session.kind === "lesson" ? "Try three" : session.kind === "diag" ? "Placement" : session.kind === "check" ? `${RUNGS[session.target]} level test` : null;
   const segs = session.items.map((it, k) => el("span", { class: (k < session.i ? "done" : k === session.i ? "now" : "") + (session.starredAtStart?.has(it.key) ? " star" : "") }));
   return [el("div", { class: "topbar" },
     el("span", { class: "muted num" }, `${label ? label + " · " : ""}${session.i + 1} / ${session.items.length} · ${right} right`),
@@ -745,9 +746,18 @@ function dontKnow(item, secs) {
 }
 const dontKnowRow = (item, seconds) => (session.kind === "check" ? null : el("div", { class: "dontknow" }, el("button", { class: "link small", onclick: () => dontKnow(item, seconds()) }, "I don't know this")));
 
-let diagTimer = null;
+let diagTimer = null, clockTimer = null;
+// The placement test's per-question limit, shown as it runs. Screen readers get the limit once, not every second.
+function clockEl() {
+  if (session.kind !== "diag") return null;
+  const t0 = performance.now();
+  const c = el("p", { class: "muted small num clock", role: "timer", "aria-label": `${ITEM_SECONDS} seconds per question` }, `${ITEM_SECONDS}s left`);
+  clearInterval(clockTimer);
+  clockTimer = setInterval(() => { if (!c.isConnected) return clearInterval(clockTimer); c.textContent = `${Math.max(0, Math.ceil(ITEM_SECONDS - (performance.now() - t0) / 1000))}s left`; }, 250);
+  return c;
+}
 function nextItem() {
-  clearTimeout(diagTimer);
+  clearTimeout(diagTimer); clearInterval(clockTimer);
   if (session.i >= session.items.length) return finish();
   const item = session.items[session.i];
   if (session.kind === "diag" && session.skipSets?.has(item.set)) { session.i += 1; return nextItem(); }
@@ -777,7 +787,7 @@ function nextItem() {
   }
 
   if (item.choices) {
-    screen(header(), promptEl(item), el("p", { class: "muted" }, "Pick one."), dontKnowRow(item, seconds));
+    screen(header(), promptEl(item), clockEl(), el("p", { class: "muted" }, "Pick one."), dontKnowRow(item, seconds));
     setBar(item.choices.map((c, idx) => el("button", { class: "primary", onclick: () => grade(item, isCorrect(item, idx), seconds(), c) }, c)));
     keys({});
     return;
@@ -793,7 +803,7 @@ function nextItem() {
     grade(item, isCorrect(item, given), secs, input.value);
   };
   const minus = el("button", { type: "button", "aria-label": "toggle negative", onclick: () => { input.value = input.value.startsWith("-") ? input.value.slice(1) : "-" + input.value; input.focus(); } }, "±");
-  screen(header(), promptEl(item),
+  screen(header(), promptEl(item), clockEl(),
     el("form", { id: "ansform", onsubmit: (e) => { e.preventDefault(); submit(); } }, el("div", { class: "inputrow" }, input, minus)),
     dontKnowRow(item, seconds));
   setBar([el("button", { class: "primary", type: "submit", form: "ansform" }, "Check")]);
@@ -803,7 +813,7 @@ function nextItem() {
 
 function grade(item, correct, secs, typed, replay = false) {
   keys({});
-  clearTimeout(diagTimer);
+  clearTimeout(diagTimer); clearInterval(clockTimer);
   if (!replay && session.kind === "diag") {
     session.diagRun ??= {}; session.skipSets ??= new Set();
     session.diagRun[item.set] = correct ? 0 : (session.diagRun[item.set] ?? 0) + 1;
@@ -903,7 +913,7 @@ function finish() {
   const goal = starred.length || dueTomorrow ? `Tomorrow starts with ${starred.length} starred${dueTomorrow ? ` and ${dueTomorrow} due back` : ""}.` : streakNow ? `Day ${((streakNow - 1) % 7) + 1} of 7 this week.` : "Come back tomorrow to start a streak.";
   const missed = r.filter((a) => !a.correct).map((a) => session.items.find((it) => it.key === a.key)).filter(Boolean);
   screen(
-    el("h1", {}, session.kind === "weekly" ? "Sunday check done" : session.club ? `Club session ${session.club.short} done` : "Session done"),
+    el("h1", {}, session.kind === "weekly" ? "Sunday score done" : session.club ? `Club session ${session.club.short} done` : "Session done"),
     session.club ? el("p", { class: "muted small" }, `${session.club.clubName}: everyone ran these same ten questions. Your answers are tagged for the club count; no one sees them individually.`) : null,
     el("div", { class: "tiles" },
       tile(right, `of ${r.length} correct`, (x) => String(Math.round(x))),
@@ -972,7 +982,7 @@ function diagnosticResult() {
       el("div", { class: "titlerow" }, el("span", { class: "title" }, GROUP_LABELS[set][0]), el("span", { class: `badge l${Math.min(4, Math.floor(p.rung / 2))}` }, RUNGS[p.rung])),
       el("div", { class: "muted small num" }, p.label + (prev?.[set] ? ` · last time ${prev[set].right} of ${prev[set].total}` : "") + (session.skipSets?.has(set) ? " · stopped early after four misses" : "")))),
     store.starredItems().length ? el("p", { class: "small star", style: "margin-top:12px" }, `${store.starredItems().length} kinds starred. They come first in your next session.`) : null,
-    el("p", { class: "muted small" }, "Levels above Mostly right need a level check, which you can sit from the Progress tab once your typed sessions support it.")
+    el("p", { class: "muted small" }, "Levels above Mostly right need a level test, which you can take from the Progress tab once your typed sessions support it.")
   );
   setBar([el("button", { class: "primary", onclick: () => startSession("today", "type", state.count) }, "Start a typed session"), el("button", { onclick: () => go("#/") }, "Home")]);
 }
@@ -994,7 +1004,7 @@ function checkResult(right) {
     el("h1", {}, pass ? `${RUNGS[session.target]}.` : "Not yet"),
     el("div", { class: "card" },
       el("p", { class: "num", style: "font-size:22px;font-weight:600" }, `${right} / 10 · needed ${checkRequirement(session.target).need}`),
-      el("p", { class: "muted" }, pass ? `${GROUP_LABELS[session.checkSet][0]} is now ${RUNGS[session.target]}. It decays if you stop practising typed.` : "Misses are starred. The check unlocks again in 24 hours; drill the starred kinds first."))
+      el("p", { class: "muted" }, pass ? `${GROUP_LABELS[session.checkSet][0]} is now ${RUNGS[session.target]}. It decays if you stop practising typed.` : "Misses are starred. The level test unlocks again in 24 hours; drill the starred kinds first."))
   );
   setBar([el("button", { class: "primary", onclick: () => startSession(session.checkSet, "type", 10) }, "Drill this set"), el("button", { onclick: () => go("#/") }, "Home")]);
 }
@@ -1076,7 +1086,7 @@ function stats() {
       return el("div", { class: "card" },
         el("div", { class: "titlerow" }, el("button", { class: "link", style: "padding:0;min-height:0;font-weight:600", onclick: () => go(`#/set/${set}`) }, GROUP_LABELS[set][0]), rungBadge(d)),
         el("div", { class: "muted small" }, d.next),
-        d.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(set, d.canCheck) }, `Sit the ${RUNGS[d.canCheck]} check`) : locked ? el("div", { class: "muted small" }, "Check locked for 24 hours after a miss.") : null);
+        d.canCheck && !locked ? el("button", { class: "link small", style: "padding:4px 0", onclick: () => startCheck(set, d.canCheck) }, `Take the ${RUNGS[d.canCheck]} level test`) : locked ? el("div", { class: "muted small" }, "Level test locked for 24 hours after a miss.") : null);
     })),
     el("h2", {}, `Starred (${starredList.length})`),
     starredList.length ? el("p", { class: "muted small" }, "A star is a kind of question, not one set of numbers. Each clears after two correct answers in a row, and starred kinds come first in every session.") : el("p", { class: "muted small" }, "Nothing starred. Misses land here as kinds of question and come back with new numbers."),
@@ -1091,12 +1101,12 @@ function stats() {
       el("div", { class: "tile" }, el("div", { class: "v num" }, String(store.starredItems().length)), el("div", { class: "l" }, "starred"))),
     el("p", { class: "muted small num" }, `Say mode ${sayAcc ?? "–"}% · Type mode ${typeAcc ?? "–"}%`),
     gap ? el("p", { class: "star" }, "Your say-mode score is more than ten points above your typed score. You are grading yourself softly.") : null,
-    store.weekly.length ? el("h2", {}, "Sunday checks") : null,
+    store.weekly.length ? el("h2", {}, "Sunday scores") : null,
     ...store.weekly.slice(-8).reverse().map((w) => el("p", { class: "num small" }, `Week of ${w.week}: ${w.score} / ${w.total}`)),
     el("h2", {}, "By drill"),
-    el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Drill"), el("th", {}, "Level"), el("th", { class: "num" }, "Tries"), el("th", { class: "num" }, "Correct"), el("th", {}, "Trend"))),
-      el("tbody", {}, rows.map((s) => el("tr", {}, el("td", {}, nice(s.drill)), el("td", {}, DRILLS[s.drill] ? LEVELS[masteryLevel(store.attempts, s.drill, store.starredKeys())] : "–"), el("td", { class: "num" }, String(s.attempts)), el("td", { class: "num" }, `${s.accuracy}%`), el("td", {}, sparkline(series(s.drill))))))),
-    el("p", { class: "muted small", style: "margin-top:16px" }, "Levels use your last 20 typed answers per drill: Learning at 10 answers, Solid at 80%, Fast at 90% and under 12s, Cold at 95%, under 8s and nothing starred. Trend is accuracy per day over the last eight days you practised that drill."),
+    el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Drill"), el("th", { class: "num" }, "Tries"), el("th", { class: "num" }, "Correct"), el("th", {}, "Trend"))),
+      el("tbody", {}, rows.map((s) => el("tr", {}, el("td", {}, drillTitle(s.drill)), el("td", { class: "num" }, String(s.attempts)), el("td", { class: "num" }, `${s.accuracy}%`), el("td", {}, sparkline(series(s.drill))))))),
+    el("p", { class: "muted small", style: "margin-top:16px" }, "Trend is accuracy per day over the last eight days you practised that drill. Levels are per set, at the top of this page."),
     el("button", { class: "link", onclick: () => {
       const blob = new Blob([JSON.stringify({ attempts: store.attempts, stars: store.stars, days: store.days, weekly: store.weekly, bests: store.bests }, null, 1)], { type: "application/json" });
       const a = el("a", { href: URL.createObjectURL(blob), download: `napkin-progress-${dayKey(new Date())}.json` }); document.body.append(a); a.click(); a.remove();
@@ -1136,7 +1146,7 @@ function dispatch() {
     history.pushState(null, "", "#/session");
     return finish();
   }
-  session = null; clearTimeout(diagTimer); keys({});
+  session = null; clearTimeout(diagTimer); clearInterval(clockTimer); keys({});
   if (!store.priorities && store.attempts.length === 0 && !["about", "join", "clubSession"].includes(r.name)) return welcome();
   switch (r.name) {
     case "today": return today();

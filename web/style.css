@@ -54,7 +54,10 @@ button.primary:active { transform: translateY(4px); box-shadow: 0 0 0 var(--acce
 button.ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; font-weight: 600; text-align: center; min-height: 56px; box-shadow: 0 3px 0 color-mix(in srgb, var(--ok) 35%, transparent); }
 button.miss { background: var(--miss-bg); color: var(--miss); border-color: transparent; font-weight: 600; text-align: center; min-height: 56px; box-shadow: 0 3px 0 color-mix(in srgb, var(--miss) 35%, transparent); }
 button.ok:active, button.miss:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
-button.link { border: none; background: none; color: var(--accent); padding: 8px 4px; min-height: 40px; box-shadow: none; }
+button.link { border: none; background: none; color: var(--accent); padding: 8px 4px; min-height: 44px; box-shadow: none; }
+button:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; filter: saturate(0.4); }
+button:disabled:hover { background: var(--surface); }
+button.primary:disabled:hover { background: var(--accent); filter: saturate(0.4); }
 button.link:hover { background: none; text-decoration: underline; }
 button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent), var(--shadow); }
 
@@ -66,9 +69,9 @@ button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
 .topbar { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); gap: 8px; }
 .progress { display: flex; gap: 3px; height: 5px; margin-bottom: var(--space-3); }
-.progress > span { flex: 1 1 0; border-radius: 3px; background: var(--surface-2); position: relative; transition: background 180ms ease-out; }
+.progress > span { flex: 1 1 0; border-radius: 3px; background: color-mix(in srgb, var(--muted) 80%, var(--bg)); position: relative; transition: background 180ms ease-out; }
 .progress > span.done { background: var(--accent); }
-.progress > span.now { background: color-mix(in srgb, var(--accent) 45%, var(--surface-2)); }
+.progress > span.now { background: linear-gradient(90deg, var(--accent) 50%, color-mix(in srgb, var(--muted) 80%, var(--bg)) 50%); }
 .progress > span.star::after { content: ""; position: absolute; right: 0; top: -3px; width: 5px; height: 5px; border-radius: 50%; background: var(--star); }
 .prompt { font-size: 26px; line-height: 1.3; font-weight: 600; margin: var(--space-3) 0; letter-spacing: -0.01em; }
 .prompt.long { font-size: 24px; }
@@ -79,7 +82,7 @@ button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0
 .mark.miss { color: var(--miss); background: var(--miss-bg); }
 .star { color: var(--star); font-weight: 600; }
 input[type="text"] { font: inherit; font-size: 24px; width: 100%; padding: 12px 14px; border-radius: var(--radius);
-  border: 1px solid var(--border); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  border: 1px solid color-mix(in srgb, var(--muted) 80%, var(--surface)); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 pre { white-space: pre-wrap; font: 15px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: var(--space-2); overflow-x: auto; }
@@ -137,7 +140,9 @@ td, th { padding: 12px 4px; }
 .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; background: var(--surface-2); }
 .badge.l2 { color: var(--accent); border-color: var(--accent); background: transparent; }
 .badge.l3, .badge.l4 { color: var(--ok); border-color: transparent; background: var(--ok-bg); }
-.card.locked { opacity: 0.8; display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); }
+.tick { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--muted); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; line-height: 1; }
+.tick.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.card.locked { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); }
 .card.notice { border-color: var(--star); background: var(--star-bg); margin-bottom: var(--space-2); }
 .card.notice .title { font-weight: 600; margin-bottom: 4px; }
 button.card.action { width: 100%; margin-bottom: var(--space-1); }
@@ -169,7 +174,8 @@ textarea.note:focus-visible { outline: 3px solid var(--accent); outline-offset: 
   body:has(.tabbar:not([hidden])) .app { margin-left: calc(50% - 280px + 44px); }
 }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
-.chips .chip { min-height: 32px; padding: 4px 12px; font-size: 13px; border-radius: 999px; box-shadow: none; }
+.chips .chip { min-height: 32px; padding: 4px 12px; font-size: 13px; border-radius: 999px; box-shadow: none; position: relative; }
+.chips .chip::before { content: ""; position: absolute; inset: -6px 0; } /* 44px tap area, same look */
 .chips .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: transparent; }
 .chipgap { width: 8px; }
 .tabbar[hidden] { display: none; }
@@ -177,3 +183,5 @@ textarea.note:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 .board li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .lastnote { margin: 8px 0 0; font-size: 14px; color: var(--ok); }
+.clock { margin: 0 0 10px; }
+button.primary .sub { display: block; font-size: 14px; font-weight: 500; margin-top: 2px; }
