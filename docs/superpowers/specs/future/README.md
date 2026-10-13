@@ -9,7 +9,7 @@ Oct 13, 2026. Four agents each developed one direction into a proposal grounded 
 | `content.md` | Next question sets and a system that catches wrong or ambiguous questions |
 | `quant-lab.md` | Stage 4 from the brief: returns, drawdowns, backtests, pitfall demos |
 
-## Foundation: fix what is broken now (recommended before any path)
+## Foundation: fix what is broken now (approved Oct 13; built Oct 13)
 
 About 2 agent sessions and 15 owner minutes, mostly running one SQL file.
 
@@ -33,6 +33,10 @@ A contract lint over every drill, wrong typed answers saved for weekly triage, a
 
 Worth building, not now: first rounds rarely ask about backtests, and the statistics set already covers Sharpe and volatility at interview depth. First slice only: eight text drills on returns and risk, plus a seeded price generator. The rest (price explorer, four strategy lessons, look-ahead and overfitting demos, a self-graded whiteboard checklist) waits for winter break. Synthetic data, because index data licensing rules out the S&P 500. Nothing in the lab goes on a resume; only a backtest he writes and can whiteboard counts.
 
-## Recommendation
+## Decision (Oct 13)
+
+Approved order: foundation, then A, then B. Cleared stars return after 3, 7 and 21 days. The summary's main button is "Done for today". The privacy floor leaves out the leader (built that way; the owner asked for an explanation).
+
+## Recommendation (as proposed)
 
 Foundation, then A, then B starting with M&A. C after FIR season. A and the foundation improve every user's experience and make the pilot numbers trustworthy; B is the most valuable to his own recruiting but costs the most of his time.

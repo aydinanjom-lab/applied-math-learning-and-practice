@@ -43,10 +43,12 @@ export const joinLink = (code, base = "https://napkinprep.com/") => `${base}#/jo
 // Seven numbers for the leader page, in plain words. `floor` means fewer than five active members: nothing but the count is shown.
 export function summaryRows(s) {
   if (!s) return [];
-  if (s.floor) return [["Members", String(s.members)], ["Everything else", "Shows once five or more members have practised. This protects members from being singled out."]];
+  const through = s.through ? `Last seven full days, through ${s.through}` : null;
+  if (s.floor) return [["Members besides you", String(s.members)], ["Everything else", "Shows once five members besides you have practised in the last seven full days. This protects members from being singled out."], ...(through ? [["Period", through]] : [])];
   const sets = Object.entries(s.avg_level_by_set ?? {}).map(([k, v]) => `${GROUP_LABELS[k]?.[0] ?? k} ${Number(v).toFixed(1)}`).join(" · ");
   return [
-    ["Members", String(s.members)],
+    ["Members besides you", String(s.members)],
+    ...(through ? [["Period", through]] : []),
     ["Active this week", String(s.active_7d)],
     ["Answers this week", String(s.attempts_7d)],
     ["Typed accuracy this week", s.typed_accuracy_7d === null ? "–" : `${s.typed_accuracy_7d}%`],

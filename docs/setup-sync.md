@@ -46,6 +46,16 @@ Links: join `https://napkinprep.com/#/join/CLUB-CODE`, session `https://napkinpr
 
 Run `supabase/clubs_sets.sql` in the SQL Editor after `clubs.sql`. It adds a `sets` column to clubs, returns it with each member's join date, and adds `set_cohort_sets` for the leader. Until it runs, the leader page's "Question sets" save fails with a function-not-found message and members' sessions ignore club sets. The editor will warn about destructive operations: the only drops are two functions being recreated with a new return shape; no data is touched.
 
+## Foundation fixes and owner numbers (fourth SQL file)
+
+Run `supabase/foundation.sql` after `clubs_sets.sql`. It makes the leader summary work, tightens the club policies, and adds `owner_metrics()`. Then give your own account access to the numbers page at `#/owner`, and optionally leave test accounts out of every count:
+
+```sql
+insert into public.app_admins (user_id) select id from auth.users where email = 'YOUR SIGN-IN EMAIL';
+-- optional, per test account:
+insert into public.metrics_excluded (user_id) select id from auth.users where email = 'TEST ACCOUNT EMAIL';
+```
+
 ## Sign-in email through Resend (do this before inviting a club)
 
 Supabase's built-in sender allows 2 emails an hour for the whole project. With a custom sender the limit is 30 an hour and adjustable.

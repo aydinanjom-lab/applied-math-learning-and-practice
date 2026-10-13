@@ -37,7 +37,7 @@ test("links and pending-join storage", () => {
 });
 
 test("summary rows: the floor hides everything but the member count", () => {
-  assert.deepEqual(summaryRows({ members: 3, floor: true })[0], ["Members", "3"]);
+  assert.deepEqual(summaryRows({ members: 3, floor: true })[0], ["Members besides you", "3"]);
   assert.equal(summaryRows({ members: 3, floor: true }).length, 2);
   const rows = summaryRows({ members: 12, active_7d: 7, attempts_7d: 310, typed_accuracy_7d: 74, returned_5_days: 2, top_missed: [{ drill: "wacc", misses: 9, tries: 20 }], club_session_done: 5, avg_level_by_set: { banking: 2.5 }, floor: false });
   assert.equal(rows.length, 8);

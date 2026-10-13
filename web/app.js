@@ -5,7 +5,7 @@ import { RUNS } from "./runs.js";
 import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } from "./priorities.js";
 import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLevelCheck } from "./levels.js";
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
-import { Store } from "./store.js";
+import { Store, STORAGE_KEY } from "./store.js";
 import { parseRoute, TABS } from "./router.js";
 import { normalizeCode, suggestCode, shortCode, newSeed, clubSessionItems, clubSessionLink, joinLink, summaryRows, holdJoin, takeJoin, PACKS, MAX_CLUB_SETS, cleanSets, mergeClubSets, clubSetIds, boostClubWeights } from "./clubs.js";
 import { SyncClient, mergeProgress } from "./sync.js";
@@ -35,32 +35,48 @@ const sync = new SyncClient(SUPABASE);
 const syncState = { user: null, last: null, error: null, busy: false, cohorts: [] };
 let syncTimer = null;
 
+// Every upload first pulls the account's copy and merges it in, so one device never overwrites another's answers.
+// Uploads run one at a time; a change during an upload queues one more.
+let syncRunning = null, syncAgain = false, syncDirty = false;
 async function pullAndMerge() {
   if (!syncState.user) return;
-  syncState.busy = true;
-  try {
-    const remote = await sync.load(syncState.user.id);
-    if (remote) store.load(mergeProgress(store.snapshot(), remote));
-    store.onSave = null; store.save(); store.onSave = scheduleSync;
-    await sync.save(syncState.user.id, store.snapshot());
-    syncState.last = new Date(); syncState.error = null;
-  } catch (e) { syncState.error = e.message ?? String(e); }
-  syncState.busy = false;
+  if (syncRunning) { syncAgain = true; return syncRunning; }
+  syncRunning = (async () => {
+    do {
+      syncAgain = false; syncDirty = false; syncState.busy = true;
+      try {
+        const remote = await sync.load(syncState.user.id);
+        if (remote) { store.onSave = null; store.load(mergeProgress(store.snapshot(), remote)); store.save(); store.onSave = scheduleSync; }
+        await sync.save(syncState.user.id, store.snapshot());
+        syncState.last = new Date(); syncState.error = null;
+      } catch (e) { syncState.error = e.message ?? String(e); syncDirty = true; }
+      syncState.busy = false;
+    } while (syncAgain && syncState.user);
+  })();
+  try { await syncRunning; } finally { syncRunning = null; }
 }
 function scheduleSync() {
   if (!syncState.user) return;
+  syncDirty = true;
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(async () => {
-    try { await sync.save(syncState.user.id, store.snapshot()); syncState.last = new Date(); syncState.error = null; }
-    catch (e) { syncState.error = e.message ?? String(e); }
-  }, 1500);
+  syncTimer = setTimeout(pullAndMerge, 1500);
 }
+const flushSync = () => { if (syncState.user && syncDirty) { clearTimeout(syncTimer); return pullAndMerge(); } };
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushSync(); });
+window.addEventListener("online", () => flushSync());
+// Which account this browser's copy belongs to, so a second account never absorbs the first one's progress.
+const OWNER_KEY = "napkin_owner";
+const localOwner = () => { try { return localStorage.getItem(OWNER_KEY); } catch { return null; } };
+const setLocalOwner = (v) => { try { if (v) localStorage.setItem(OWNER_KEY, v); else localStorage.removeItem(OWNER_KEY); } catch {} };
 async function startSync() {
   if (!sync.configured) return;
   try {
     syncState.user = await sync.user();
     if (syncState.user) {
+      const owner = localOwner();
+      if (owner && owner !== syncState.user.id) { store.onSave = null; store.load({}); store.save(); }
       store.onSave = scheduleSync; await pullAndMerge();
+      setLocalOwner(syncState.user.id);
       const held = takeJoin(localStorage);
       if (held) { try { await sync.joinCohort(held); } catch (e) { syncState.error = e.message ?? String(e); } }
       await loadCohorts();
@@ -330,6 +346,34 @@ function you() {
 // ---------- clubs ----------
 const copyButton = (text, label = "Copy link") => el("button", { class: "link small", onclick: async (e) => { try { await navigator.clipboard.writeText(text); e.target.textContent = "Copied"; } catch { e.target.textContent = text; } } }, label);
 
+// The owner's numbers: totals across signed-in accounts, from owner_metrics(). Not linked; open #/owner.
+async function ownerPage() {
+  if (!syncState.user) return screen(el("h1", {}, "Numbers"), el("p", {}, "Sign in first."), back("#/you"));
+  screen(el("h1", {}, "Numbers"), el("p", { class: "muted" }, "Loading…"));
+  let m;
+  try { m = await sync.rpc("owner_metrics"); } catch { return screen(el("h1", {}, "Numbers"), el("p", {}, "Not available."), back("#/you")); }
+  const row = (k, v) => el("div", { class: "card", style: "padding:10px 14px" }, el("div", { class: "titlerow" }, el("span", { class: "muted small" }, k), el("span", { class: "num", style: "font-weight:600" }, String(v ?? "–"))));
+  const ret = (m.retention ?? []).map((r) => el("p", { class: "small num" }, `Started week of ${r.week}: ${r.n} ${r.n === 1 ? "person" : "people"}. Back in week 1: ${r.w1} of ${r.n} · week 2: ${r.w2} of ${r.n} · week 4: ${r.w4} of ${r.n}`));
+  const pitch = `Since launch, ${m.practised_all} signed-in students have practised on Napkin. ${m.days5_all} have practised on five or more different days, and ${m.active_7d} practised in the last seven days. (Signed-in accounts only, test accounts left out; a practice day is a day with at least one answer. As of ${m.as_of}.)`;
+  screen(
+    el("h1", {}, "Numbers"),
+    el("p", { class: "muted small" }, `Signed-in accounts only, test accounts left out. Totals, never one person. As of ${m.as_of}.`),
+    el("div", { class: "stack" },
+      row("Have practised, all time", m.practised_all), row("New in the last 7 days", m.new_7d),
+      row("Practised in the last 7 days", m.active_7d), row("Practised in the last 28 days", m.active_28d),
+      row("Practised on 2+ days, all time", m.days2_all), row("Practised on 5+ days, all time", m.days5_all), row("Practised on 5+ days, last 28 days", m.days5_28d),
+      row("Sessions in the last 7 days", m.sessions_7d), row("Median sessions per active person, 7 days", m.median_sessions_7d), row("Median practice days per active person, 7 days", m.median_days_7d)),
+    el("h2", {}, "Coming back, by start week"),
+    ...(ret.length ? ret : [el("p", { class: "muted small" }, "No one has started in the last nine weeks.")]),
+    el("p", { class: "muted small" }, "Counts, not percentages, until a week has ten or more people."),
+    el("h2", {}, "Clubs with five or more active members"),
+    ...((m.clubs ?? []).length ? m.clubs.map((c) => el("p", { class: "small num" }, `${c.name}: ${c.members} members besides the leader, ${c.active_7d} active this week, ${c.days5_28d} on 5+ days in 28`)) : [el("p", { class: "muted small" }, "None yet.")]),
+    el("h2", {}, "For a pitch"),
+    el("p", { class: "small" }, pitch), copyButton(pitch, "Copy this paragraph"),
+    el("p", { class: "muted small" }, "Before quoting any number, be able to say how it is counted. That is the rule from your brief."),
+    back("#/you"));
+}
+
 function clubPage(opts = {}) {
   if (!sync.configured) return page("you", el("h1", {}, "Club"), el("p", {}, "Clubs need accounts, and sync is not switched on for this copy of Napkin."), back("#/you"));
   if (!syncState.user) {
@@ -476,6 +520,17 @@ async function clubSessionRoute(short) {
   setBar([el("button", { class: "primary", onclick: () => { session = null; startSession(r.set_id, "type", items.length, { items, kind: "drill", club: { short: r.short_code, clubName: r.club_name } }); } }, "Start"), el("button", { onclick: () => go("#/") }, "Not now")]);
 }
 
+async function signOut() {
+  await flushSync();
+  await sync.signOut(); syncState.user = null; store.onSave = null; await loadCohorts();
+  if (confirm("Also remove your progress from this browser? It stays saved in your account. Choose OK on a shared computer.")) {
+    try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem("napkin_state"); } catch {}
+    setLocalOwner(null); store.load({}); store.save();
+    return go("#/");
+  }
+  go("#/you");
+}
+
 function account() {
   if (!sync.configured) {
     return screen(
@@ -493,7 +548,7 @@ function account() {
         el("p", { class: "muted small num" }, syncState.error ? `Last sync failed: ${syncState.error}` : syncState.last ? `Last synced ${syncState.last.toLocaleTimeString()}` : "Not synced yet"),
         el("div", { class: "row" },
           el("button", { onclick: async () => { await pullAndMerge(); account(); } }, "Sync now"),
-          el("button", { onclick: async () => { await sync.signOut(); syncState.user = null; store.onSave = null; await loadCohorts(); go("#/you"); } }, "Sign out"))),
+          el("button", { onclick: signOut }, "Sign out"))),
       el("p", { class: "muted small" }, "Signing out leaves this browser's copy in place. Your account copy is untouched."),
       back("#/you")
     );
@@ -585,7 +640,10 @@ function about() {
     el("h1", {}, "About Napkin"),
     el("p", {}, "Napkin is a daily warm-up for the arithmetic that comes up in finance interviews, at a poker table, and in running a small business. Say the answer out loud, reveal, grade yourself. Type mode keeps you honest."),
     el("h2", {}, "Your data"),
-    el("p", { class: "small" }, "Everything you do here is saved in this browser only: your answers, times, stars, and streak. Nothing is sent anywhere. No account, no cookies, no trackers. Clearing this site's data in your browser erases it. Use Export on the Stats page to keep a copy."),
+    syncState.user
+      ? el("p", { class: "small" }, "Your answers, times, stars, and streak are saved in this browser and in your account, so they follow you between devices. A club leader sees only club totals, and nothing until five members have practised. The app shows Aydin, who runs Napkin, only totals across accounts; as the database owner he could open a record, and the app is built so he never needs to.")
+      : el("p", { class: "small" }, "Until you sign in, your answers, times, stars, and streak stay in this browser only. Clearing this site's data erases them. No ads and no trackers."),
+    el("p", { class: "small" }, "Every visit loads a font from Google Fonts and, when sign-in is switched on, the sign-in library from esm.sh. Those services see that the page was opened, not your answers. Use Export on the Progress page to keep a copy of your data."),
     el("h2", {}, "Sports betting set"),
     el("p", { class: "small" }, SET_NOTES.betting + " If you are under 21, it is arithmetic practice and nothing more."),
     el("h2", {}, "Terms"),
@@ -735,21 +793,25 @@ function nextItem() {
   keys({});
 }
 
-function grade(item, correct, secs, typed) {
+function grade(item, correct, secs, typed, replay = false) {
   keys({});
   clearTimeout(diagTimer);
-  if (session.kind === "diag") {
+  if (!replay && session.kind === "diag") {
     session.diagRun ??= {}; session.skipSets ??= new Set();
     session.diagRun[item.set] = correct ? 0 : (session.diagRun[item.set] ?? 0) + 1;
     if (session.diagRun[item.set] >= 4) session.skipSets.add(item.set);
   }
-  const wasStarred = store.isStarred(item);
   const family = familyOf(item);
   const attempt = { key: item.key, drill: item.drill, family, correct, seconds: secs, mode: session.mode, ts: Date.now() / 1000, ...(session.club ? { club_session: session.club.short } : {}) };
-  store.record(item, attempt);
-  store.save();
-  if (session.kind !== "diag" && session.kind !== "check") session.results.push(attempt);
-  const cleared = wasStarred && !store.isStarred(item);
+  // Recorded once. A replay (back from the one-minute method) shows the same result without logging it again.
+  if (!replay) {
+    const wasStarred = store.isStarred(item);
+    store.record(item, attempt);
+    store.save();
+    if (session.kind !== "diag" && session.kind !== "check") session.results.push(attempt);
+    item._cleared = wasStarred && !store.isStarred(item);
+  }
+  const cleared = item._cleared;
   const fam = FAMILIES[family] ?? { name: nice(item.drill), method: null };
   const lessonId = LESSON_BY_FAMILY[family];
   const status = cleared ? el("p", { class: "star" }, `Star cleared: ${fam.name}. Two clean reps in a row.`)
@@ -785,7 +847,7 @@ function grade(item, correct, secs, typed) {
     status,
     !correct && session.kind === "drill" ? el("div", { class: "row", style: "margin-top:8px" },
       el("button", { onclick: tryOne }, "Try one like it now"),
-      lessonId ? el("button", { onclick: () => lesson(lessonId, () => grade(item, correct, secs, typed)) }, store.lessonsRead.includes(lessonId) ? "Read the method again" : "Read the one-minute method") : null) : null,
+      lessonId ? el("button", { onclick: () => lesson(lessonId, () => grade(item, correct, secs, typed, true)) }, store.lessonsRead.includes(lessonId) ? "Read the method again" : "Read the one-minute method") : null) : null,
     el("a", { class: "muted small", style: "margin-top:12px", href: `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Napkin: wrong answer? " + item.key)}&body=${encodeURIComponent(item.prompt + "\n\nShown answer: " + display(item) + "\n\nWhat I think is right:\n")}` }, "Think this answer is wrong? Report it.")
   );
   setBar([el("button", { class: "primary", onclick: next, autofocus: "" }, session.i + 1 < session.items.length ? "Next" : "Finish")], true, correct ? "ok" : "miss");
@@ -1067,6 +1129,7 @@ function dispatch() {
     case "account": return account();
     case "priorities": return welcome(store.priorities);
     case "about": return about();
+    case "owner": return ownerPage();
     case "club": return r.params.id ? clubDetail(r.params.id) : clubPage();
     case "join": return joinRoute(r.params.code);
     case "clubSession": return clubSessionRoute(r.params.short);
