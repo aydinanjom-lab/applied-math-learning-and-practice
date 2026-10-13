@@ -6,6 +6,7 @@ import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } fr
 import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLevelCheck } from "./levels.js";
 import { dueReviews, upcomingReviews, REVIEW_GAPS } from "./review.js";
 import { reminderFor } from "./reminder.js";
+import { spokenNumber } from "./voice.js";
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store, STORAGE_KEY } from "./store.js";
 import { parseRoute, TABS } from "./router.js";
@@ -380,6 +381,47 @@ function you() {
 const copyButton = (text, label = "Copy link") => el("button", { class: "link small", onclick: async (e) => { try { await navigator.clipboard.writeText(text); e.target.textContent = "Copied"; } catch { e.target.textContent = text; } } }, label);
 
 // The owner's numbers: totals across signed-in accounts, from owner_metrics(). Not linked; open #/owner.
+// ---------- voice test (hidden, #/voice) ----------
+// A phone test before any voice feature is built: does speech recognition work in this browser, and in the
+// Home Screen app? Five fixed phrases; the result line can be copied and sent back.
+const VOICE_PHRASES = [["thirty-three point three", 33.3], ["twelve fifty", 1250], ["zero point eight five", 0.85], ["seventy-two percent", 72], ["three to one", 3]];
+function voiceTest() {
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const where = isStandalone() ? "Home Screen app" : "browser tab";
+  const results = VOICE_PHRASES.map(() => null);
+  let lastError = null;
+  const summary = () => `Voice test · ${where} · recognition ${Rec ? "available" : "missing"} · ${results.filter((r) => r?.ok).length}/${VOICE_PHRASES.length} read right · error: ${lastError ?? "none"} · ${navigator.userAgent.replace(/^Mozilla\/5\.0 /, "").slice(0, 90)}`;
+  const listen = (k) => {
+    if (!Rec) return;
+    const rec = new Rec();
+    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 3;
+    results[k] = { heard: "listening…", ok: false };
+    draw();
+    rec.onresult = (e) => {
+      const alts = [...e.results[0]].map((a) => a.transcript);
+      const read = alts.map(spokenNumber).find((v) => v !== null) ?? null;
+      results[k] = { heard: alts.join(" | "), read, ok: read !== null && Math.abs(read - VOICE_PHRASES[k][1]) < 1e-9 };
+      draw();
+    };
+    rec.onerror = (e) => { lastError = e.error; results[k] = { heard: `error: ${e.error}`, ok: false }; draw(); };
+    rec.onend = () => { if (results[k]?.heard === "listening…") { results[k] = { heard: "nothing heard", ok: false }; draw(); } };
+    try { rec.start(); } catch (err) { lastError = String(err.message || err); results[k] = { heard: `error: ${lastError}`, ok: false }; draw(); }
+  };
+  const draw = () => page("you",
+    el("h1", {}, "Voice test"),
+    el("p", { class: "muted" }, `A check before voice answers get built. Running in a ${where}. Speech recognition: ${Rec ? "available" : "not available here"}.`),
+    el("p", { class: "muted small" }, "Your browser's speech service hears the audio: Apple's on iPhone, Google's on Chrome. Nothing is saved here."),
+    ...VOICE_PHRASES.map(([say], k) => el("div", { class: "card", style: "margin-bottom:8px;padding:12px 14px" },
+      el("div", { class: "titlerow" }, el("span", { class: "title" }, `Say "${say}"`), el("button", { class: "chip", disabled: Rec ? null : "", onclick: () => listen(k) }, "Listen")),
+      results[k] ? el("div", { class: `small ${results[k].ok ? "" : "muted"}`, style: results[k].ok ? "color:var(--ok)" : "" }, `${results[k].ok ? "✓ " : ""}Heard: ${results[k].heard}${results[k].read !== undefined ? ` · read as ${results[k].read ?? "nothing"}` : ""}`) : null)),
+    el("h2", {}, "Send this back"),
+    el("p", { class: "small num" }, summary()),
+    el("button", { onclick: async () => { try { await navigator.clipboard.writeText(summary()); announce("Copied."); } catch {} } }, "Copy the result line"),
+    el("p", { class: "muted small" }, "Try it twice: once in a Safari tab, once from the Home Screen icon."),
+    back("#/you"));
+  draw();
+}
+
 async function ownerPage() {
   if (!syncState.user) return screen(el("h1", {}, "Numbers"), el("p", {}, "Sign in first."), back("#/you"));
   screen(el("h1", {}, "Numbers"), el("p", { class: "muted" }, "Loading…"));
@@ -1174,7 +1216,7 @@ function dispatch() {
     return finish();
   }
   session = null; clearTimeout(diagTimer); clearInterval(clockTimer); keys({});
-  if (!store.priorities && store.attempts.length === 0 && !["about", "join", "clubSession"].includes(r.name)) return welcome();
+  if (!store.priorities && store.attempts.length === 0 && !["about", "join", "clubSession", "voice"].includes(r.name)) return welcome();
   switch (r.name) {
     case "today": return today();
     case "practice": return practice();
@@ -1191,6 +1233,7 @@ function dispatch() {
     case "priorities": return welcome(store.priorities);
     case "about": return about();
     case "owner": return ownerPage();
+    case "voice": return voiceTest();
     case "club": return r.params.id ? clubDetail(r.params.id) : clubPage();
     case "join": return joinRoute(r.params.code);
     case "clubSession": return clubSessionRoute(r.params.short);

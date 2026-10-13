@@ -12,13 +12,13 @@ const ROUTES = [
   ["/", "today"], ["/practice", "practice"], ["/set/:id", "set"], ["/runs", "runs"],
   ["/lessons", "lessons"], ["/lesson/:id", "lesson"], ["/glossary", "glossary"], ["/card", "card"], ["/explain/:name", "explain"],
   ["/progress", "progress"],
-  ["/you", "you"], ["/owner", "owner"], ["/account", "account"], ["/priorities", "priorities"], ["/about", "about"],
+  ["/you", "you"], ["/owner", "owner"], ["/voice", "voice"], ["/account", "account"], ["/priorities", "priorities"], ["/about", "about"],
   ["/join/:code", "join"], ["/s/:short", "clubSession"], ["/club", "club"], ["/club/:id", "club"],
   ["/session", "session"],
 ];
 
 // Which tab a route lights up.
-const TAB_OF = { today: "today", practice: "practice", set: "practice", runs: "practice", lessons: "lessons", lesson: "lessons", glossary: "lessons", card: "lessons", explain: "lessons", progress: "progress", you: "you", account: "you", priorities: "you", about: "you", owner: "you", join: "you", club: "you", clubSession: "practice" };
+const TAB_OF = { today: "today", practice: "practice", set: "practice", runs: "practice", lessons: "lessons", lesson: "lessons", glossary: "lessons", card: "lessons", explain: "lessons", progress: "progress", you: "you", account: "you", priorities: "you", about: "you", owner: "you", voice: "you", join: "you", club: "you", clubSession: "practice" };
 
 export function parseRoute(hash) {
   let path = String(hash ?? "").replace(/^#/, "");

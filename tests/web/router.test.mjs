@@ -11,6 +11,7 @@ test("routes parse with params and map to tabs", () => {
   assert.deepEqual(parseRoute("#/join/KELLEY-FIR"), { name: "join", params: { code: "KELLEY-FIR" }, tab: "you" });
   assert.deepEqual(parseRoute("#/s/MXQ7"), { name: "clubSession", params: { short: "MXQ7" }, tab: "practice" });
   assert.equal(parseRoute("#/session").name, "session");
+  assert.deepEqual(parseRoute("#/voice"), { name: "voice", params: {}, tab: "you" });
   assert.equal(parseRoute("#/explain/pot%20odds").params.name, "pot odds");
 });
 
