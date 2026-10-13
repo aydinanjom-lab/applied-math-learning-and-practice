@@ -9,3 +9,5 @@ data/progress.json
 # deep-research scratch; the finished report is copied into docs/
 research_notes/
 reports/
+
+node_modules/
