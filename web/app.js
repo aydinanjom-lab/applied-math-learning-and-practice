@@ -5,6 +5,7 @@ import { RUNS } from "./runs.js";
 import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } from "./priorities.js";
 import { RUNGS, rungDetail, setRung, buildLevelCheck, checkRequirement, gradeLevelCheck } from "./levels.js";
 import { dueReviews, upcomingReviews, REVIEW_GAPS } from "./review.js";
+import { reminderFor } from "./reminder.js";
 import { buildDiagnostic, placeFromResults, diagnosticDue, ITEM_SECONDS } from "./diagnostic.js";
 import { Store, STORAGE_KEY } from "./store.js";
 import { parseRoute, TABS } from "./router.js";
@@ -187,7 +188,9 @@ function welcome(existing = null, onDone = null) {
       el("div", { class: "stack" }, mins(5, "a quick hit"), mins(10, "the default"), mins(20, "when you have time")),
       el("h2", {}, "I'll do this (optional)"),
       el("div", { class: "row" }, chip("after breakfast"), chip("between classes"), chip("before bed")),
-      el("p", { class: "muted small" }, "Naming a moment roughly doubles the odds you actually do it. You can change all of this later under Priorities.")
+      el("p", { class: "muted small" }, "Naming a moment roughly doubles the odds you actually do it. You can change all of this later under Priorities."),
+      el("a", { class: "small", href: reminderFor(draft.when).file, style: "display:inline-block;padding:12px 0" }, "Add a daily reminder to my calendar"),
+      el("p", { class: "muted small", style: "margin-top:0" }, `A 10-minute event every day at ${reminderFor(draft.when).time}${draft.when ? `, ${draft.when}` : ""}. Delete it in your calendar to stop it.`)
     );
     setBar([el("button", { onclick: step2 }, "Back"), el("button", { class: "primary", onclick: finish }, existing ? "Save" : "Start")]);
   };
@@ -244,6 +247,29 @@ const questionsLabel = (n) => `${n} questions · about ${aboutMinutes(n)} min`;
 const rungBadge = (r) => el("span", { class: `badge l${Math.min(4, Math.floor(r.rung / 2))}` }, r.name + (r.stale ? " · stale" : ""));
 const noticeCard = (title, text, button) => el("div", { class: "card notice", style: "margin-top:16px" }, el("div", { class: "title" }, title), el("p", { class: "muted small" }, text), button);
 
+// ---------- install ----------
+// After two sessions, one card: on iPhone, how to add Napkin to the Home Screen (Safari can clear a site's data
+// after a week away; Home Screen apps keep theirs); on Chrome, an Install button. Remembered per browser.
+const INSTALL_SEEN = "napkin_install_seen";
+let installEvent = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; if (!session && parseRoute(location.hash).name === "today") today(); });
+window.addEventListener("appinstalled", () => markInstallSeen());
+const isStandalone = () => window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function markInstallSeen() { try { localStorage.setItem(INSTALL_SEEN, "1"); } catch {} }
+function installSeen() { try { return localStorage.getItem(INSTALL_SEEN) === "1"; } catch { return false; } }
+function installCard() {
+  if (store.sessions < 2 || isStandalone() || installSeen() || !(isIOS() || installEvent)) return null;
+  const close = () => { markInstallSeen(); today(); };
+  if (isIOS()) return noticeCard(syncState.user ? "Open Napkin in one tap" : "Keep your progress safe",
+    `${syncState.user ? "Your progress is backed up to your account." : "Safari can clear a site's saved progress after a week without a visit. Home Screen apps keep theirs."} Tap Share, then Add to Home Screen.`,
+    el("button", { onclick: close }, "Got it"));
+  return noticeCard("Install Napkin", "It opens in its own window, one tap away, and works offline.",
+    el("div", { class: "row" },
+      el("button", { class: "primary", onclick: async () => { const e = installEvent; installEvent = null; try { await e.prompt(); } catch {} markInstallSeen(); today(); } }, "Install"),
+      el("button", { onclick: close }, "Not now")));
+}
+
 // Today: one action, status, and cards only when they matter.
 function today() {
   const starred = store.starredItems().length;
@@ -272,6 +298,7 @@ function today() {
       el("div", { class: "row" }, el("button", { onclick: () => go("#/priorities") }, "Set the next date"), el("button", { onclick: () => { store.priorities = { ...store.priorities, interviewDate: null }; store.save(); today(); } }, "No date for now"))) : null,
     diagDue ? noticeCard(store.diagnostics.length ? "Placement, four weeks on" : "Six-minute placement", store.diagnostics.length ? "It has been four weeks. Eight typed questions per priority set, to see what moved." : "Eight typed questions per priority set. Places you honestly and stars what you miss.", el("button", { class: "primary", onclick: startDiagnostic }, "Take it")) : null,
     due ? noticeCard("Sunday score", "Ten typed questions from what you have started. This is the honest score.", el("button", { class: "primary", onclick: startWeekly }, "Take the Sunday score")) : null,
+    installCard(),
     el("button", { class: "link", style: "margin-top:16px", onclick: () => go("#/practice") }, "Your sets, levels and interview runs")
   );
 }
