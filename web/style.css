@@ -175,3 +175,5 @@ textarea.note:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 .tabbar[hidden] { display: none; }
 .board { margin: 0; padding-left: 24px; }
 .board li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.lastnote { margin: 8px 0 0; font-size: 14px; color: var(--ok); }

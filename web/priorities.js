@@ -1,5 +1,5 @@
 // Priorities: five plain-language areas over the nine sets, and the "Today" session they drive.
-import { GROUPS, DRILLS } from "./drills.js";
+import { GROUPS, DRILLS, addReviews } from "./drills.js";
 import { masteryLevel } from "./progress.js";
 
 export const AREAS = {
@@ -43,7 +43,7 @@ export function weightsFor(store, sets, interviewDate, today = new Date()) {
   return out;
 }
 
-export function todayQueue(store, sets, n, weights, rng) {
+export function todayQueue(store, sets, n, weights, rng, reviews = []) {
   const wanted = new Set(sets);
   const queue = [];
   const seen = new Set();
@@ -58,12 +58,15 @@ export function todayQueue(store, sets, n, weights, rng) {
       if (!seen.has(it.key)) { seen.add(it.key); queue.push(it); count[set] = (count[set] ?? 0) + 1; break; }
     }
   }
-  const cap = Math.max(1, Math.ceil(n * 0.6));
+  addReviews(queue, seen, reviews, n, rng, (d) => Boolean(setOf(d)));
+  for (const it of queue) if (it.review) count[setOf(it.drill)] = (count[setOf(it.drill)] ?? 0) + 1;
+  // No set takes more than 60% of a session, unless the other sets cannot fill it.
+  let cap = Math.max(1, Math.ceil(n * 0.6));
   let tries = 0;
   while (queue.length < n && tries < n * 60) {
     tries++;
     const open = sets.filter((s) => (count[s] ?? 0) < cap);
-    if (!open.length) break;
+    if (!open.length) { if (cap < n) { cap = n; continue; } break; }
     const total = open.reduce((a, s) => a + (weights[s] ?? 1), 0);
     let r = rng.random() * total, set = open[0];
     for (const s of open) { r -= weights[s] ?? 1; if (r <= 0) { set = s; break; } }

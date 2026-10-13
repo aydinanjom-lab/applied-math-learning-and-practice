@@ -699,7 +699,18 @@ export function resolve(name) {
   throw new Error(`Unknown drill or group: ${name}`);
 }
 
-export function buildQueue(store, drillNames, n, rng) {
+// Kinds due back for review (see review.js) go in after the starred kinds, never more than n.
+export function addReviews(queue, seen, reviews, n, rng, accept = () => true) {
+  for (const r of reviews ?? []) {
+    if (queue.length >= n || !DRILLS[r.drill] || !accept(r.drill)) continue;
+    for (let t = 0; t < 20; t++) {
+      const it = DRILLS[r.drill](rng, { family: r.family });
+      if (familyOf(it) === r.family && !seen.has(it.key)) { seen.add(it.key); it.review = true; queue.push(it); break; }
+    }
+  }
+}
+
+export function buildQueue(store, drillNames, n, rng, reviews = []) {
   const wanted = new Set(drillNames);
   const queue = [];
   const seen = new Set();
@@ -710,6 +721,7 @@ export function buildQueue(store, drillNames, n, rng) {
       if (familyOf(it) === star.family && !seen.has(it.key)) { seen.add(it.key); queue.push(it); break; }
     }
   }
+  addReviews(queue, seen, reviews, n, rng, (d) => wanted.has(d));
   let i = 0, tries = 0;
   while (queue.length < n && tries < n * 50) {
     const it = DRILLS[drillNames[i % drillNames.length]](rng);

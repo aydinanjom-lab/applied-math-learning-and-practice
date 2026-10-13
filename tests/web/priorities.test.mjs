@@ -47,3 +47,21 @@ test("todayQueue: starred first, then weighted draws, no set above 60%, no dupli
   assert.ok(quick <= 6, `cap at 60%: got ${quick}`);
   assert.ok(quick >= 4, "weighted toward the heavy set");
 });
+
+test("one priority set still fills the whole session", async () => {
+  const { Store } = await import("../../web/store.js");
+  const st = { getItem: () => null, setItem: () => {} };
+  const store = new Store(st);
+  const q = todayQueue(store, ["quick"], 10, { quick: 3 }, makeRng(4));
+  assert.equal(q.length, 10);
+});
+
+test("reviews come after starred kinds, inside the session size", async () => {
+  const { Store } = await import("../../web/store.js");
+  const store = new Store({ getItem: () => null, setItem: () => {} });
+  const q = todayQueue(store, ["quick", "poker"], 10, { quick: 3, poker: 3 }, makeRng(5), [{ family: "pot_odds", drill: "pot_odds" }, { family: "nope", drill: "nope" }]);
+  assert.equal(q.length, 10);
+  assert.equal(q[0].family ?? q[0].drill, "pot_odds");
+  assert.ok(q[0].review);
+  assert.equal(q.filter((it) => it.review).length, 1, "unknown drills are skipped");
+});
