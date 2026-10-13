@@ -33,6 +33,22 @@ export function parseAnswer(text) {
   return Number(t) * mult;
 }
 
+// The unit a question asks for: "$M" or "in millions" means millions, "$B" means billions.
+export function promptUnit(prompt) {
+  if (/\$B\b|in billions/i.test(prompt)) return 1e9;
+  if (/\$M\b|in millions/i.test(prompt)) return 1e6;
+  return 1;
+}
+// Parse a typed answer in the question's unit, so "315M" on a $M question is 315 and "1.2B" is 1,200.
+// A plain number is taken as already in that unit.
+export function parseAnswerFor(item, text) {
+  const v = parseAnswer(text);
+  if (v === null) return null;
+  const unit = promptUnit(item.prompt ?? "");
+  const hasSuffix = /[kmb]\s*$/i.test(String(text).trim().replace(/[%x]$/i, ""));
+  return unit !== 1 && hasSuffix ? v / unit : v;
+}
+
 export function isCorrect(item, given) {
   if (item.choices) return given === item.answer;
   const diff = Math.abs(given - item.answer);

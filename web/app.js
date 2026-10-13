@@ -1,5 +1,5 @@
 // Screens: home -> session -> summary. Also interview run, weekly check, starred, stats, explain.
-import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, LATER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, fmt, makeRng } from "./drills.js";
+import { GROUPS, GROUP_LABELS, DEFINITIONS, EXPLANATIONS, DRILLS, UNLOCK_AFTER, LATER, FAMILIES, familyOf, buildQueue, isCorrect, parseAnswer, parseAnswerFor, fmt, makeRng } from "./drills.js";
 import { LESSONS, LESSON_BY_ID, LESSON_BY_FAMILY } from "./lessons.js";
 import { RUNS } from "./runs.js";
 import { AREAS, AREA_ORDER, setsForAreas, daysUntil, weightsFor, todayQueue } from "./priorities.js";
@@ -722,7 +722,7 @@ function nextItem() {
   const submit = () => {
     const secs = seconds();
     input.setCustomValidity("");
-    const given = parseAnswer(input.value);
+    const given = parseAnswerFor(item, input.value);
     if (given === null) { input.setCustomValidity("Digits only, like 25 or 33.3"); input.reportValidity(); input.classList.remove("shake"); void input.offsetWidth; input.classList.add("shake"); return; }
     grade(item, isCorrect(item, given), secs, input.value);
   };

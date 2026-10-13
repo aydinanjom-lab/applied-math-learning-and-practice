@@ -1,14 +1,14 @@
 // Drill generators. An item: { key, drill, prompt, answer, explanation, rel_tol, abs_tol, choices? }.
 // Prompt rules: situation first, question last, answer format stated. Jargon lives in the explanation.
 
-import { makeRng, fmt, r2, parseAnswer, isCorrect, item, comb2, NUM, PCT, USD, USDM, POTS, potAndCall, exactEquity, DRAW_NAMES, familyOf, familyFromKey } from "./core.js";
+import { makeRng, fmt, r2, parseAnswer, parseAnswerFor, isCorrect, item, comb2, NUM, PCT, USD, USDM, POTS, potAndCall, exactEquity, DRAW_NAMES, familyOf, familyFromKey } from "./core.js";
 import { FAMILIES } from "./families.js";
 import * as interview from "./interview.js";
 import * as finance from "./finance.js";
 import * as quick2 from "./quick2.js";
 import * as quant from "./quant.js";
 import * as pokeradv from "./pokeradv.js";
-export { makeRng, fmt, parseAnswer, isCorrect, familyOf, familyFromKey, FAMILIES };
+export { makeRng, fmt, parseAnswer, parseAnswerFor, isCorrect, familyOf, familyFromKey, FAMILIES };
 
 // ======================= poker =======================
 

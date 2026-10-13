@@ -55,3 +55,20 @@ test("every rule of thumb named in an explanation is taught in a lesson", () => 
     "pot / (pot + bet)", "bet / (pot + 2 x bet)", "1 bluff for every 2 value bets", "under about 3", "two pot-sized bets", "SPR 13", "full count", "fold x pot", "about 55%", "about 82%", "about 74%", "about 60%", "about 70%"];
   for (const r of rules) assert.ok(text.includes(r.toLowerCase()), `no lesson teaches: ${r}`);
 });
+
+import { parseAnswerFor, promptUnit } from "../../web/core.js";
+test("unit letters are read in the question's unit", () => {
+  const m = { prompt: "What is the equity value? Answer in $M." }, b = { prompt: "What is the market cap? Answer in $B." }, plain = { prompt: "How many? Answer with a number." };
+  assert.equal(promptUnit(m.prompt), 1e6);
+  assert.equal(parseAnswerFor(m, "315"), 315);
+  assert.equal(parseAnswerFor(m, "315M"), 315);
+  assert.equal(parseAnswerFor(m, "$315m"), 315);
+  assert.equal(parseAnswerFor(m, "1.2B"), 1200);
+  assert.equal(parseAnswerFor(m, "500k"), 0.5);
+  assert.equal(parseAnswerFor(b, "2.5B"), 2.5);
+  assert.equal(parseAnswerFor(plain, "2k"), 2000);
+  assert.equal(parseAnswerFor(m, "abc"), null);
+  for (const name of Object.keys(DRILLS)) for (const it of items(name, 5)) {
+    if (promptUnit(it.prompt) === 1e6 && !it.choices) assert.ok(isCorrect(it, parseAnswerFor(it, `${it.answer}M`)), `${it.key}`);
+  }
+});
