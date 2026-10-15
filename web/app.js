@@ -38,7 +38,8 @@ const MARK = () => { const s = document.createElementNS("http://www.w3.org/2000/
   s.innerHTML = '<g transform="rotate(-8 32 32)"><path d="M10 10 H40 L54 24 V54 H10 Z" fill="currentColor"/><path d="M40 10 V24 H54 Z" fill="#4f46e5"/></g>'; return s; };
 const store = new Store(window.localStorage);
 const sync = new SyncClient(SUPABASE);
-const syncState = { user: null, last: null, error: null, busy: false, cohorts: [] };
+// checked: whether we know yet if someone is signed in (false until the first check returns).
+const syncState = { user: null, last: null, error: null, busy: false, cohorts: [], checked: !sync.configured }; // no sync set up: nobody can be signed in
 let syncTimer = null;
 
 // Every upload first pulls the account's copy and merges it in, so one device never overwrites another's answers.
@@ -78,6 +79,8 @@ async function startSync() {
   if (!sync.configured) return;
   try {
     syncState.user = await sync.user();
+    syncState.checked = true;
+    if (!syncState.user && !session && parseRoute(location.hash).name === "today") today();
     if (syncState.user) {
       const owner = localOwner();
       if (owner && owner !== syncState.user.id) { store.onSave = null; store.load({}); store.save(); }
@@ -251,8 +254,9 @@ const rungBadge = (r) => el("span", { class: `badge l${Math.min(4, Math.floor(r.
 const noticeCard = (title, text, button) => el("div", { class: "card notice", style: "margin-top:16px" }, el("div", { class: "title" }, title), el("p", { class: "muted small" }, text), button);
 
 // ---------- install ----------
-// After two sessions, one card: on iPhone, how to add Napkin to the Home Screen (Safari can clear a site's data
-// after a week away; Home Screen apps keep theirs); on Chrome, an Install button. Remembered per browser.
+// After two sessions, one card for people who are not signed in (their progress lives only in this browser): on
+// iPhone, how to add Napkin to the Home Screen (Safari can clear a site's data after a week away; Home Screen apps
+// keep theirs); on Chrome, an Install button. Never shown while the sign-in check is pending. Remembered per browser.
 const INSTALL_SEEN = "napkin_install_seen";
 let installEvent = null;
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; if (!session && parseRoute(location.hash).name === "today") today(); });
@@ -262,10 +266,11 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.p
 function markInstallSeen() { try { localStorage.setItem(INSTALL_SEEN, "1"); } catch {} }
 function installSeen() { try { return localStorage.getItem(INSTALL_SEEN) === "1"; } catch { return false; } }
 function installCard() {
+  if (!syncState.checked || syncState.user) return null;
   if (store.sessions < 2 || isStandalone() || installSeen() || !(isIOS() || installEvent)) return null;
   const close = () => { markInstallSeen(); today(); };
-  if (isIOS()) return noticeCard(syncState.user ? "Open Napkin in one tap" : "Keep your progress safe",
-    `${syncState.user ? "Your progress is backed up to your account." : "Safari can clear a site's saved progress after a week without a visit. Home Screen apps keep theirs."} Tap Share, then Add to Home Screen.`,
+  if (isIOS()) return noticeCard("Keep your progress safe",
+    "Safari can clear a site's saved progress after a week without a visit. Home Screen apps keep theirs. Tap Share, then Add to Home Screen.",
     el("button", { onclick: close }, "Got it"));
   return noticeCard("Install Napkin", "It opens in its own window, one tap away, and works offline.",
     el("div", { class: "row" },
